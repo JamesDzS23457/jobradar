@@ -95,7 +95,7 @@ export const api = {
   } = {}) => request<{ items: Job[]; total: number }>(`/api/jobs${queryString(params)}`),
   job: (id: number) => request<{ job: Job }>(`/api/jobs/${id}`),
   importJob: (url: string) =>
-    request<{ job: Job; created: boolean; extracted_with: string }>("/api/jobs/import-url", {
+    request<{ job: Job; created: boolean; extracted_with: string; link_only?: boolean; message?: string }>("/api/jobs/import-url", {
       method: "POST",
       body: JSON.stringify({ url }),
     }),

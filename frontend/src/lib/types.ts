@@ -103,6 +103,9 @@ export type Job = {
   posted_at: string | null;
   status: "new" | "saved" | "dismissed" | "applied" | "discarded";
   imported_manually: boolean;
+  link_only: boolean;
+  requires_login: boolean;
+  access_note: string;
   skills_required: string[];
   skills_nice: string[];
   seniority: string;

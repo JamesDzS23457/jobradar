@@ -84,6 +84,9 @@ def test_websearch_builds_targeted_queries_and_filters_urls():
     assert any("elempleo.com" in query for query in queries)
     assert source._looks_like_job("https://co.computrabajo.com/oferta/123")
     assert source._looks_like_job("https://boards.greenhouse.io/acme/jobs/123")
+    assert source._looks_like_job("https://www.linkedin.com/jobs/view/123")
+    assert source._is_manual_host("https://www.linkedin.com/jobs/view/123")
+    assert source._is_manual_host("https://co.computrabajo.com/oferta/123")
     assert not source._looks_like_job("https://example.com/blog/python")
 
 
@@ -139,3 +142,46 @@ def test_import_url_rejects_internal_targets():
 
     assert response.status_code == 400
     assert "privadas" in response.json()["detail"].lower()
+
+
+def test_link_only_payload_extracts_title_and_company_from_url():
+    from app.services.job_import import link_only_payload
+
+    payload = link_only_payload(
+        "https://www.linkedin.com/jobs/view/backend-developer-at-acme-123456789",
+        "Ingresa al portal para postularte.",
+        "LinkedIn",
+    )
+    assert payload["title"] == "Backend Developer"
+    assert payload["company"] == "Acme"
+    assert payload["link_only"] is True
+    assert payload["requires_login"] is True
+    assert payload["url"].startswith("https://www.linkedin.com/")
+
+
+def test_import_url_keeps_link_when_portal_requires_login(monkeypatch):
+    from app.api import routes
+    from app.services.job_import import JobLinkOnlyError
+
+    def fake_import(url: str):
+        raise JobLinkOnlyError("Ingresa al portal para postularte: requiere iniciar sesión.")
+
+    monkeypatch.setattr(routes, "import_job_from_url", fake_import)
+    with TestClient(app) as client:
+        client.post("/api/demo/reset")
+        response = client.post(
+            "/api/jobs/import-url",
+            json={"url": "https://www.linkedin.com/jobs/view/backend-developer-at-acme-123456789"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["link_only"] is True
+        assert data["job"]["link_only"] is True
+        assert data["job"]["requires_login"] is True
+        assert "iniciar sesión" in data["message"].lower()
+
+        jobs = client.get("/api/jobs?max_age_days=2").json()["items"]
+        saved = next(item for item in jobs if item["id"] == data["job"]["id"])
+        assert saved["requires_login"] is True
+        assert saved["match"]["eligible"] is True
+        client.post("/api/demo/reset")

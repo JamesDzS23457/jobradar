@@ -160,6 +160,21 @@ def build_standard_fields(
     }
 
 
+def _portal_payload(job: Job, settings: Settings | None = None) -> dict[str, object]:
+    portal = classify_portal(job.url, settings).as_dict()
+    if job.link_only:
+        note = str((job.raw_json or {}).get("access_note") or "")
+        portal.update(
+            {
+                "mode": "manual_only",
+                "can_assist": False,
+                "can_auto_submit": False,
+                "reason": note or "El enlace requiere iniciar sesión en el portal.",
+            }
+        )
+    return portal
+
+
 def build_preview(
     db: Session,
     job: Job,
@@ -168,7 +183,8 @@ def build_preview(
     settings: Settings,
     cv_source: str | None = None,
 ) -> dict[str, Any]:
-    portal = classify_portal(job.url, settings)
+    portal = _portal_payload(job, settings)
+    portal_mode = str(portal["mode"])
     source = resolve_cv_source(cv_source, prefs)
     original = original_cv_path(profile)
     tailored = _latest_tailored(db, job.id)
@@ -184,11 +200,11 @@ def build_preview(
         warnings.append("El CV adaptado se generará al preparar la postulación.")
     if tailored and not tailored.approved:
         warnings.append("El CV adaptado aún no está aprobado. Revísalo antes de enviarlo.")
-    if portal.mode == "manual_only":
-        warnings.append(portal.reason)
+    if portal_mode == "manual_only":
+        warnings.append(str(portal["reason"]))
     return {
         "job": job_summary(job, include_description=True),
-        "portal": portal.as_dict(),
+        "portal": portal,
         "cv_source": source,
         "cv_options": {
             "tailored": {
@@ -206,8 +222,8 @@ def build_preview(
         "fields": build_standard_fields(profile, prefs, tailored),
         "cover_letter": str(content.get("cover_letter", "")),
         "warnings": warnings,
-        "can_assist": portal.can_assist,
-        "can_auto_submit": portal.can_auto_submit,
+        "can_assist": bool(portal["can_assist"]),
+        "can_auto_submit": bool(portal["can_auto_submit"]),
     }
 
 
@@ -222,6 +238,8 @@ def create_session(
     status: str = "awaiting_review",
 ) -> ApplicationSession:
     portal = classify_portal(job.url, settings)
+    if job.link_only:
+        raise ValueError("Este enlace requiere iniciar sesión en el portal; ábrelo para postularte.")
     if not portal.can_assist:
         raise ValueError(portal.reason)
     source = resolve_cv_source(cv_source, prefs)
@@ -319,8 +337,11 @@ def job_summary(job: Job, include_description: bool = False) -> dict[str, Any]:
         "languages": job.languages or {},
         "red_flags": job.red_flags or [],
         "match": match_to_dict(job.match),
-        "portal": classify_portal(job.url).as_dict(),
+        "portal": _portal_payload(job),
         "imported_manually": bool(job.imported_manually),
+        "link_only": bool(job.link_only),
+        "requires_login": bool((job.raw_json or {}).get("requires_login")),
+        "access_note": str((job.raw_json or {}).get("access_note") or ""),
     }
     if include_description:
         data["description"] = clean_html_text(job.description)
@@ -389,6 +410,8 @@ def _eligible_jobs(db: Session, prefs: Preferences) -> list[Job]:
     cutoff = datetime.now(UTC) - timedelta(days=max(1, prefs.freshness_days or 2))
     eligible: list[Job] = []
     for job in jobs:
+        if job.link_only:
+            continue
         if job.match is None or not job.match.eligible:
             continue
         if job.application is not None and job.application.status in {"applied", "interview", "offer"}:

@@ -127,6 +127,10 @@ class JobImportError(ValueError):
     """A user-facing error while importing a job URL."""
 
 
+class JobLinkOnlyError(JobImportError):
+    """The link is valid but the portal blocks automatic reading/login is required."""
+
+
 def _validate_url(raw_url: str) -> str:
     url = (raw_url or "").strip()
     parsed = urlparse(url)
@@ -489,9 +493,9 @@ def _payload_from_metadata(soup: BeautifulSoup, page_url: str) -> dict[str, Any]
     location_text = _meta_content(soup, "job:location", "og:locality")
     combined = f"{title} {description}".lower()
     if any(marker in combined for marker in ("sign in to view", "inicia sesión para ver", "authwall")):
-        raise JobImportError(
-            "El portal pide iniciar sesión para mostrar la vacante. Abre el enlace en tu navegador "
-            "o usa una URL pública de la oferta."
+        raise JobLinkOnlyError(
+            "Ingresa al portal para postularte: este enlace requiere iniciar sesión "
+            "para mostrar la vacante."
         )
     if not title or title.lower() in _GENERIC_TITLES:
         raise JobImportError(
@@ -533,6 +537,78 @@ def _domain_company(url: str) -> str:
     return host.split(".")[0].replace("-", " ").title() if host else ""
 
 
+def _title_company_from_url(url: str) -> tuple[str, str]:
+    parsed = urlparse(url)
+    parts = [part for part in parsed.path.split("/") if part]
+    slug = parts[-1] if parts else ""
+    if slug.lower() in {"jobs", "job", "view", "apply", "vacante", "oferta"} and len(parts) > 1:
+        slug = parts[-2]
+    slug = re.sub(r"\.(?:html?|php|aspx?)$", "", slug, flags=re.I)
+    slug = re.sub(r"[-_]?\d{5,}$", "", slug)
+    slug = re.sub(r"[-_]+", " ", slug).strip()
+    if not slug:
+        return "", ""
+    company = ""
+    lower = slug.lower()
+    if " at " in lower:
+        index = lower.index(" at ")
+        title, company = slug[:index], slug[index + 4 :]
+    elif " en " in lower:
+        index = lower.index(" en ")
+        title, company = slug[:index], slug[index + 4 :]
+    else:
+        title = slug
+    title = re.sub(r"^(?:oferta de trabajo de|oferta de empleo de|empleo de)\s+", "", title, flags=re.I)
+    clean_title = _clean_title(title.title())
+    clean_company = _clean_title(company.title()) if company else ""
+    return clean_title, clean_company
+
+
+def link_only_payload(raw_url: str, note: str = "", portal_label: str = "") -> dict[str, Any]:
+    """Build a safe placeholder for a public link that cannot be read automatically."""
+    url = _validate_url(raw_url)
+    title, company = _title_company_from_url(url)
+    domain_company = _domain_company(url)
+    company = company or domain_company
+    if not title:
+        title = f"Vacante en {portal_label or company or 'el portal'}"
+    access_note = note or (
+        "Ingresa al portal para postularte: este enlace requiere inicio de sesión "
+        "o no permite leer la vacante automáticamente."
+    )
+    description = (
+        f"{access_note}\n\n"
+        "JobRadar conservó el enlace original para que puedas abrirlo, revisar la vacante "
+        "y postularte directamente en el portal."
+    )
+    return {
+        "source": _source_from_url(url),
+        "external_id": url,
+        "title": title,
+        "company": company,
+        "description": description,
+        "location_text": "No especificada",
+        "city": "",
+        "country": "",
+        "remote_type": "unknown",
+        "remote_scope": "unknown",
+        "salary_min": None,
+        "salary_max": None,
+        "currency": "COP",
+        "url": url,
+        "posted_at": None,
+        "skills_required": find_skills(f"{title} {description}")[:12],
+        "skills_nice": [],
+        "seniority": seniority_from_title(title),
+        "years_experience": 0,
+        "languages": {},
+        "red_flags": ["Requiere iniciar sesión en el portal"],
+        "link_only": True,
+        "requires_login": True,
+        "access_note": access_note,
+    }
+
+
 def extract_job_from_html(html: str, page_url: str) -> tuple[dict[str, Any], str]:
     """Extract a job payload and the extraction method from public HTML."""
     soup = BeautifulSoup(html, "html.parser")
@@ -569,8 +645,14 @@ def import_job_from_url(raw_url: str) -> tuple[dict[str, Any], str]:
             response = client.get(url)
             response.raise_for_status()
     except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status in {401, 403, 429, 999}:
+            raise JobLinkOnlyError(
+                "Ingresa al portal para postularte: este enlace requiere iniciar sesión "
+                "o bloquea la lectura automática."
+            ) from exc
         raise JobImportError(
-            f"El portal respondió {exc.response.status_code}. La vacante puede estar cerrada o "
+            f"El portal respondió {status}. La vacante puede estar cerrada o "
             "requerir inicio de sesión."
         ) from exc
     except httpx.HTTPError as exc:

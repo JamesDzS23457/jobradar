@@ -134,6 +134,25 @@ Ingeniero Backend, Python Developer, Desarrollador Python
 
 Si tu CV dice que solo hablas español, JobRadar no te mostrará como elegibles las vacantes que exijan inglés de forma explícita. Las que digan “English is a plus” o “inglés deseable” no se descartan por ese motivo.
 
+
+## 4.2 Enlaces de LinkedIn, Computrabajo y otros portales
+
+JobRadar no inicia sesión en portales restringidos ni evade bloqueos. Lo que hace es:
+
+- **JSearch** puede traer enlaces de LinkedIn, Indeed y Glassdoor.
+- **Jooble** agrega ofertas de muchos portales de empleo.
+- **Brave Search** descubre enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard y Torre. Requiere `BRAVE_SEARCH_API_KEY`.
+- **Importar por URL** acepta cualquier enlace público.
+
+Si el portal no permite leer la vacante automáticamente o muestra un muro de login:
+
+1. JobRadar guarda el enlace igualmente.
+2. La vacante aparece en el dashboard con el aviso **“Requiere iniciar sesión”**.
+3. Al abrirla, el detalle te muestra **“Ingresa para postularte: este portal requiere login”**.
+4. El botón **Abrir portal** te lleva al enlace original para que te postules allí.
+
+Esto aplica a LinkedIn, Computrabajo, elempleo, Magneto, Indeed, Glassdoor y cualquier portal que bloquee la lectura. No se guardan contraseñas ni se intenta saltar el login.
+
 ## 5. Asistente y auto-envío
 
 ```env

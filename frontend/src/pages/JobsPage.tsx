@@ -39,11 +39,15 @@ export function JobsPage() {
   const importMutation = useMutation({
     mutationFn: () => api.importJob(importUrl.trim()),
     onSuccess: (result) => {
-      toast.success(
-        result.created
-          ? "Vacante importada y analizada contra tu CV."
-          : "La vacante ya estaba en el radar. Actualizamos sus datos y el match.",
-      );
+      if (result.link_only) {
+        toast.info(result.message || "Guardamos el enlace. El portal requiere iniciar sesión para ver la vacante.");
+      } else {
+        toast.success(
+          result.created
+            ? "Vacante importada y analizada contra tu CV."
+            : "La vacante ya estaba en el radar. Actualizamos sus datos y el match.",
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });

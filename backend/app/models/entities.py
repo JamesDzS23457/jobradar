@@ -147,6 +147,7 @@ class Job(Base):
     raw_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(30), default="new")
     imported_manually: Mapped[bool] = mapped_column(Boolean, default=False)
+    link_only: Mapped[bool] = mapped_column(Boolean, default=False)
     skills_required: Mapped[list[str]] = mapped_column(JSON, default=list)
     skills_nice: Mapped[list[str]] = mapped_column(JSON, default=list)
     seniority: Mapped[str] = mapped_column(String(30), default="mid")

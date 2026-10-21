@@ -15,13 +15,21 @@ from urllib.parse import urlparse
 import httpx
 
 from app.models import Preferences
-from app.services.job_import import JobImportError, import_job_from_url
+from app.services.job_import import (
+    JobImportError,
+    JobLinkOnlyError,
+    import_job_from_url,
+    link_only_payload,
+)
 from app.services.sources.base import JobSource
 
 logger = logging.getLogger(__name__)
 
 BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
 JOB_HOSTS = {
+    "linkedin.com",
+    "indeed.com",
+    "glassdoor.com",
     "computrabajo.com",
     "elempleo.com",
     "magneto.com.co",
@@ -38,6 +46,14 @@ JOB_HOSTS = {
     "teamtailor.com",
 }
 JOB_PATH_MARKERS = ("/job/", "/jobs/", "/empleo", "/careers/", "/vacante", "/offer", "/position")
+MANUAL_HOSTS = {
+    "linkedin.com",
+    "indeed.com",
+    "glassdoor.com",
+    "computrabajo.com",
+    "elempleo.com",
+    "magneto.com.co",
+}
 
 
 class WebSearchSource(JobSource):
@@ -84,7 +100,12 @@ class WebSearchSource(JobSource):
                     try:
                         extracted, _ = import_job_from_url(url)
                     except JobImportError as exc:
-                        logger.info("Skipping %s: %s", url, exc)
+                        if isinstance(exc, JobLinkOnlyError) or self._is_manual_host(url):
+                            jobs.append(link_only_payload(url, str(exc)))
+                        else:
+                            logger.info("Skipping %s: %s", url, exc)
+                        if len(jobs) >= self.max_jobs:
+                            return jobs
                         continue
                     except Exception:  # pragma: no cover - network dependent
                         logger.exception("Could not import web result %s", url)
@@ -107,6 +128,11 @@ class WebSearchSource(JobSource):
             queries.append(f'site:getonbrd.com "{roles[0]}"')
             queries.append(f'site:torre.ai "{roles[0]}"')
         return queries[:6]
+
+    @staticmethod
+    def _is_manual_host(url: str) -> bool:
+        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+        return any(host == item or host.endswith(f".{item}") for item in MANUAL_HOSTS)
 
     @staticmethod
     def _looks_like_job(url: str) -> bool:

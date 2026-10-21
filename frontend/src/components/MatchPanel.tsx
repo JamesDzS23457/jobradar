@@ -4,6 +4,7 @@ import {
   ExternalLink,
   Hand,
   Loader2,
+  LogIn,
   Send,
   ShieldAlert,
   ShieldCheck,
@@ -95,6 +96,15 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
           </span>
           <span className="text-[10px] leading-relaxed text-slate-500">{job.portal.reason}</span>
         </div>
+        {(job.link_only || job.requires_login) && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-3 text-[10px] leading-relaxed text-amber-100/75">
+            <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
+            <span>
+              <strong className="font-semibold text-amber-200">Requiere iniciar sesión.</strong>{" "}
+              {job.access_note || "Abre el enlace original para ver la vacante y postularte."}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-5 p-5">

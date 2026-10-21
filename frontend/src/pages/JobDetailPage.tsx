@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   ExternalLink,
+  LogIn,
   MapPin,
   RotateCcw,
   Sparkles,
@@ -163,6 +164,25 @@ export function JobDetailPage() {
           {job.match && <ScoreRing score={job.match.score} size={92} stroke={6} />}
         </div>
       </div>
+
+      {(job.link_only || job.requires_login) && (
+        <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <LogIn className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+            <div>
+              <p className="text-xs font-semibold text-amber-200">Ingresa para postularte: este portal requiere login</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-100/70">
+                {job.access_note || "Abre el enlace original para ver la vacante y postularte directamente en el portal."}
+              </p>
+            </div>
+          </div>
+          {job.url && (
+            <a href={job.url} target="_blank" rel="noreferrer" className="btn-secondary shrink-0 px-3 py-2 text-xs">
+              <ExternalLink className="h-3.5 w-3.5" /> Abrir portal
+            </a>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">

@@ -259,7 +259,32 @@ def _profile_languages(profile: Profile) -> dict[str, str]:
     return {language_key(key): value for key, value in languages.items()}
 
 
+def link_only_match(job: Job) -> dict[str, Any]:
+    raw = job.raw_json if isinstance(job.raw_json, dict) else {}
+    note = str(raw.get("access_note") or "Abre el enlace original para ver la vacante y postularte.")
+    return {
+        "score": 0.0,
+        "eligible": True,
+        "subscores": {
+            "skills": 0.0,
+            "title": 0.0,
+            "seniority": 0.0,
+            "location": 0.0,
+            "language": 0.0,
+            "salary": 0.0,
+            "freshness": 0.0,
+        },
+        "reasons": [note],
+        "gaps": [],
+        "red_flags": ["Requiere iniciar sesión en el portal"],
+        "recommendation": "Abrir enlace original",
+        "model": "link_only",
+    }
+
+
 def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, Any]:
+    if getattr(job, "link_only", False):
+        return link_only_match(job)
     location_value, eligible, location_reason = location_fit(job, prefs)
 
     if not eligible:

@@ -37,6 +37,7 @@ def get_db() -> Generator[Session, None, None]:
 _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
     "jobs": [
         ("imported_manually", "BOOLEAN DEFAULT 0"),
+        ("link_only", "BOOLEAN DEFAULT 0"),
     ],
     "preferences": [
         ("freshness_days", "INTEGER DEFAULT 2"),

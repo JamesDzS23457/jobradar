@@ -56,7 +56,12 @@ from app.services.cv_parser import (
     parse_profile_heuristic,
 )
 from app.services.emailer import send_test_email
-from app.services.job_import import JobImportError, import_job_from_url
+from app.services.job_import import (
+    JobImportError,
+    JobLinkOnlyError,
+    import_job_from_url,
+    link_only_payload,
+)
 from app.services.llm import llm_service
 from app.services.matching import (
     canonical_skill,
@@ -112,6 +117,21 @@ def _profile_dict(profile: Profile | None) -> dict | None:
     return data
 
 
+def _portal_dict(job: Job) -> dict[str, object]:
+    portal = classify_portal(job.url, settings).as_dict()
+    if job.link_only:
+        note = str((job.raw_json or {}).get("access_note") or "")
+        portal.update(
+            {
+                "mode": "manual_only",
+                "can_assist": False,
+                "can_auto_submit": False,
+                "reason": note or "El enlace requiere iniciar sesión en el portal.",
+            }
+        )
+    return portal
+
+
 def _job_dict(job: Job, include_description: bool = False) -> dict:
     data = {
         "id": job.id,
@@ -136,8 +156,11 @@ def _job_dict(job: Job, include_description: bool = False) -> dict:
         "languages": job.languages or {},
         "red_flags": job.red_flags or [],
         "match": match_to_dict(job.match),
-        "portal": classify_portal(job.url, settings).as_dict(),
+        "portal": _portal_dict(job),
         "imported_manually": bool(job.imported_manually),
+        "link_only": bool(job.link_only),
+        "requires_login": bool((job.raw_json or {}).get("requires_login")),
+        "access_note": str((job.raw_json or {}).get("access_note") or ""),
     }
     if include_description:
         data["description"] = clean_html_text(job.description)
@@ -404,6 +427,31 @@ def import_job(payload: JobUrlImport, db: Session = Depends(get_db)) -> dict:
     try:
         extracted, extracted_with = import_job_from_url(payload.url)
     except JobImportError as exc:
+        portal = classify_portal(payload.url, settings)
+        is_http = payload.url.strip().lower().startswith(("http://", "https://"))
+        if is_http and (isinstance(exc, JobLinkOnlyError) or portal.mode == "manual_only"):
+            try:
+                extracted = link_only_payload(payload.url, str(exc), portal.label)
+            except JobImportError as fallback_exc:
+                raise HTTPException(status_code=400, detail=str(fallback_exc)) from fallback_exc
+            normalized = normalize_job_data(extracted)
+            job, created = upsert_job(db, normalized, refresh=True)
+            job.imported_manually = True
+            job.link_only = True
+            result = compute_match(profile, _prefs(db), job)
+            upsert_match(db, job, result)
+            db.commit()
+            db.refresh(job)
+            return {
+                "job": _job_dict(job, include_description=True),
+                "created": created,
+                "extracted_with": "link_only",
+                "link_only": True,
+                "message": (
+                    "Guardamos el enlace. Este portal requiere iniciar sesión o no permite "
+                    "leer la vacante automáticamente; ábrelo para ver los detalles y postularte."
+                ),
+            }
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     normalized = normalize_job_data(extracted)
@@ -447,7 +495,7 @@ def list_jobs(
         stmt = stmt.where(Job.status == "saved")
     if max_age_days is not None:
         cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
-        freshness = (Job.posted_at >= cutoff) | Job.imported_manually.is_(True)
+        freshness = (Job.posted_at >= cutoff) | Job.imported_manually.is_(True) | Job.link_only.is_(True)
         if include_unknown_date:
             freshness = freshness | Job.posted_at.is_(None)
         stmt = stmt.where(freshness)

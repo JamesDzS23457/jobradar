@@ -39,6 +39,7 @@ JOB_REFRESH_FIELDS = (
     "years_experience",
     "languages",
     "red_flags",
+    "link_only",
 )
 
 
@@ -144,6 +145,7 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
         "languages": languages,
         "red_flags": data.get("red_flags") or [],
         "raw_json": data,
+        "link_only": bool(data.get("link_only")),
     }
     normalized["hash"] = job_hash(normalized)
     return normalized
@@ -187,6 +189,7 @@ def upsert_job(db: Session, data: dict[str, Any], refresh: bool = False) -> tupl
         years_experience=data["years_experience"],
         languages=data["languages"],
         red_flags=data["red_flags"],
+        link_only=data.get("link_only", False),
     )
     db.add(job)
     db.flush()

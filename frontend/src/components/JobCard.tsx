@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Banknote, MapPin, Star } from "lucide-react";
+import { ArrowUpRight, Banknote, LogIn, MapPin, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -98,6 +98,16 @@ export function JobCard({ job, compact = false }: Props) {
       {job.match && !job.match.eligible && (
         <div className="mt-3 inline-flex rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-300">
           No elegible por ubicación
+        </div>
+      )}
+
+      {(job.link_only || job.requires_login) && (
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] leading-relaxed text-amber-100/80">
+          <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
+          <span>
+            <strong className="font-semibold text-amber-200">Requiere iniciar sesión.</strong>{" "}
+            {job.access_note || "Abre el enlace original para ver la vacante y postularte."}
+          </span>
         </div>
       )}
 
