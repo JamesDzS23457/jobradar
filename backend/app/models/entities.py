@@ -178,6 +178,8 @@ class Match(Base):
     red_flags: Mapped[list[str]] = mapped_column(JSON, default=list)
     recommendation: Mapped[str] = mapped_column(String(240), default="")
     model: Mapped[str] = mapped_column(String(80), default="heuristic")
+    fit_level: Mapped[str] = mapped_column(String(20), default="exact")
+    stretch_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     job: Mapped[Job] = relationship(back_populates="match")

@@ -177,6 +177,31 @@ Ejemplo:
 
 Así puedes saber si la oferta vino de un agregador o de una importación directa.
 
+
+## 4.4 Oportunidades potenciales
+
+Además de las coincidencias exactas, JobRadar puede mostrar vacantes donde tu perfil está cerca del nivel pedido.
+
+Se consideran potenciales cuando:
+
+- Pasan ubicación e idioma.
+- Están como máximo un nivel por encima de tu seniority configurado.
+- La diferencia de experiencia es de 2 años o menos.
+- Cubres al menos 60% del stack obligatorio.
+
+Ejemplo con perfil de 2 años y preferencia Junior:
+
+```text
+Junior 1-2 años        → exacta
+Mid 2-3 años           → potencial
+Mid 4 años             → potencial si el stack alcanza
+Senior 5+ años         → no elegible
+```
+
+En **Vacantes** puedes activar o desactivar **Incluir oportunidades potenciales**. Las potenciales aparecen con etiqueta ámbar y una explicación.
+
+El **auto-envío** ignora las potenciales: solo procesa coincidencias exactas.
+
 ## 5. Asistente y auto-envío
 
 ```env

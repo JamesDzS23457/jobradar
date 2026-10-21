@@ -61,6 +61,9 @@ ROLE_FAMILIES = {
 }
 
 SENIORITY_RANK = {"junior": 0, "mid": 1, "senior": 2, "lead": 3}
+SENIORITY_YEARS = {"junior": 0, "mid": 2, "senior": 5, "lead": 7}
+STRETCH_MAX_YEARS_GAP = 2
+STRETCH_MIN_SKILLS = 0.60
 
 LEVELS = {
     "a1": 1,
@@ -242,6 +245,8 @@ def ineligible_match(job: Job, reason: str, recommendation: str = "No elegible")
         "red_flags": job.red_flags or [],
         "recommendation": recommendation,
         "model": "heuristic",
+        "fit_level": "not_fit",
+        "stretch_reasons": [],
     }
 
 
@@ -279,6 +284,8 @@ def link_only_match(job: Job) -> dict[str, Any]:
         "red_flags": ["Requiere iniciar sesión en el portal"],
         "recommendation": "Abrir enlace original",
         "model": "link_only",
+        "fit_level": "link_only",
+        "stretch_reasons": [],
     }
 
 
@@ -303,25 +310,46 @@ def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, A
                     "No elegible por idioma",
                 )
 
+    skills_value, matched_skills, missing_skills = skill_score(
+        profile.skills or [], job.skills_required or [], job.skills_nice or []
+    )
+
     preference_seniority = str(prefs.seniority or "any").lower()
     job_seniority = str(job.seniority or "").lower()
     title_seniority = seniority_from_title(job.title)
     if title_seniority != "mid":
         job_seniority = title_seniority
-    if (
-        preference_seniority in SENIORITY_RANK
-        and job_seniority in SENIORITY_RANK
-        and SENIORITY_RANK[job_seniority] > SENIORITY_RANK[preference_seniority]
-    ):
-        return ineligible_match(
-            job,
-            f"La vacante es {job_seniority} y tu búsqueda está configurada para {preference_seniority}",
-            "No elegible por seniority",
-        )
-
-    skills_value, matched_skills, missing_skills = skill_score(
-        profile.skills or [], job.skills_required or [], job.skills_nice or []
-    )
+    fit_level = "exact"
+    stretch_reasons: list[str] = []
+    if preference_seniority in SENIORITY_RANK and job_seniority in SENIORITY_RANK:
+        level_gap = SENIORITY_RANK[job_seniority] - SENIORITY_RANK[preference_seniority]
+        if level_gap >= 2:
+            return ineligible_match(
+                job,
+                f"La vacante es {job_seniority} y está dos o más niveles por encima de {preference_seniority}",
+                "No elegible por seniority",
+            )
+        if level_gap == 1:
+            required_years = job.years_experience or SENIORITY_YEARS.get(job_seniority, 2)
+            years_gap = required_years - (profile.years_experience or 0)
+            if years_gap > STRETCH_MAX_YEARS_GAP or skills_value < STRETCH_MIN_SKILLS:
+                return ineligible_match(
+                    job,
+                    (
+                        f"La vacante es {job_seniority}, pide {required_years}+ años y "
+                        f"tu perfil tiene {profile.years_experience or 0}"
+                    ),
+                    "No elegible por experiencia",
+                )
+            fit_level = "stretch"
+            stretch_reasons.append(f"Nivel {job_seniority} vs tu preferencia {preference_seniority}")
+            if years_gap > 0:
+                stretch_reasons.append(
+                    f"Pide {required_years}+ años y tu perfil tiene {profile.years_experience or 0}"
+                )
+            stretch_reasons.append(
+                f"Cubres {round(skills_value * 100)}% del stack obligatorio"
+            )
     title_value = title_similarity(profile, job)
     seniority_value = seniority_score(profile.years_experience or 0, job)
     language_value, language_gaps = language_score(profile, job, required_languages)
@@ -351,9 +379,13 @@ def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, A
         * weight
         for key, weight in WEIGHTS.items()
     )
+    if fit_level == "stretch":
+        total *= 0.90
     score = round(max(0.0, min(100.0, total * 100)), 1)
 
     reasons: list[str] = [location_reason]
+    if fit_level == "stretch":
+        reasons.extend(stretch_reasons)
     if job.skills_required:
         reasons.append(f"Coincides en {len(matched_skills)} de {len(job.skills_required)} skills obligatorios")
     if title_value >= 0.65:
@@ -369,6 +401,8 @@ def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, A
     gaps.extend(language_gaps)
     if profile.years_experience < (job.years_experience or 0):
         gaps.append(f"Piden {job.years_experience}+ años y tu perfil tiene {profile.years_experience}")
+    if fit_level == "stretch":
+        gaps.append("Postulación potencial: revisa si tu experiencia compensa el nivel")
 
     return {
         "score": score,
@@ -377,8 +411,10 @@ def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, A
         "reasons": reasons[:5],
         "gaps": gaps[:6],
         "red_flags": job.red_flags or [],
-        "recommendation": recommendation_for(score),
+        "recommendation": "Oportunidad potencial" if fit_level == "stretch" else recommendation_for(score),
         "model": "heuristic",
+        "fit_level": fit_level,
+        "stretch_reasons": stretch_reasons,
     }
 
 
@@ -395,6 +431,8 @@ def upsert_match(db: Session, job: Job, result: dict[str, Any]) -> Match:
     match.red_flags = result["red_flags"]
     match.recommendation = result["recommendation"]
     match.model = result["model"]
+    match.fit_level = str(result.get("fit_level") or "exact")
+    match.stretch_reasons = result.get("stretch_reasons") or []
     match.profile_version = 1
     return match
 
@@ -421,4 +459,6 @@ def match_to_dict(match: Match | None) -> dict[str, Any] | None:
         "red_flags": match.red_flags,
         "recommendation": match.recommendation,
         "model": match.model,
+        "fit_level": match.fit_level,
+        "stretch_reasons": match.stretch_reasons or [],
     }

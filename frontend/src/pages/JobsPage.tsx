@@ -28,6 +28,7 @@ export function JobsPage() {
   const [remoteType, setRemoteType] = useState("all");
   const [minScore, setMinScore] = useState(0);
   const [includeIneligible, setIncludeIneligible] = useState(false);
+  const [includeStretch, setIncludeStretch] = useState(true);
   const [maxAgeDays, setMaxAgeDays] = useState(2);
   const [includeUnknownDate, setIncludeUnknownDate] = useState(false);
   const [showDiscarded, setShowDiscarded] = useState(false);
@@ -100,12 +101,13 @@ export function JobsPage() {
       remote_type: remoteType === "all" ? undefined : remoteType,
       min_score: minScore || undefined,
       include_ineligible: includeIneligible || undefined,
+      include_stretch: includeStretch,
       max_age_days: maxAgeDays || undefined,
       include_unknown_date: includeUnknownDate || undefined,
       discarded: showDiscarded || undefined,
       limit: 100,
     }),
-    [q, remoteType, minScore, includeIneligible, maxAgeDays, includeUnknownDate, showDiscarded],
+    [q, remoteType, minScore, includeIneligible, includeStretch, maxAgeDays, includeUnknownDate, showDiscarded],
   );
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -122,6 +124,7 @@ export function JobsPage() {
       remoteType !== "all" ||
       minScore > 0 ||
       includeIneligible ||
+      !includeStretch ||
       maxAgeDays !== 2 ||
       includeUnknownDate ||
       showDiscarded,
@@ -132,6 +135,7 @@ export function JobsPage() {
     setRemoteType("all");
     setMinScore(0);
     setIncludeIneligible(false);
+    setIncludeStretch(true);
     setMaxAgeDays(2);
     setIncludeUnknownDate(false);
     setShowDiscarded(false);
@@ -296,6 +300,15 @@ export function JobsPage() {
                 className="accent-emerald-400"
               />
               Ver no elegibles
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-amber-400/15 bg-amber-400/[0.04] px-3 py-2 text-xs text-amber-100/80">
+              <input
+                type="checkbox"
+                checked={includeStretch}
+                onChange={(event) => setIncludeStretch(event.target.checked)}
+                className="accent-amber-400"
+              />
+              Incluir oportunidades potenciales
             </label>
 
             {hasFilters && (

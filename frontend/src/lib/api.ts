@@ -72,7 +72,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 function queryString(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== "" && value !== false) {
+    if (value !== undefined && value !== "") {
       search.set(key, String(value));
     }
   });
@@ -89,6 +89,7 @@ export const api = {
     saved?: boolean;
     discarded?: boolean;
     include_ineligible?: boolean;
+    include_stretch?: boolean;
     max_age_days?: number;
     include_unknown_date?: boolean;
     limit?: number;

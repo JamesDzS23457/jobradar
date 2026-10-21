@@ -413,7 +413,7 @@ def _eligible_jobs(db: Session, prefs: Preferences) -> list[Job]:
     for job in jobs:
         if job.link_only:
             continue
-        if job.match is None or not job.match.eligible:
+        if job.match is None or not job.match.eligible or job.match.fit_level != "exact":
             continue
         if job.application is not None and job.application.status in {"applied", "interview", "offer"}:
             continue

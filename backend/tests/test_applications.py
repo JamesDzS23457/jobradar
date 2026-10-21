@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core.db import SessionLocal
 from app.main import app
-from app.models import Job
+from app.models import Job, Match
 
 
 def _prepare_greenhouse_job(client: TestClient) -> int:
@@ -229,4 +229,57 @@ def test_reimport_preserves_discarded_status():
             assert created is False
             db.refresh(job)
             assert job.status == "discarded"
+        client.post("/api/demo/reset")
+
+
+def test_jobs_api_can_hide_or_show_stretch_matches():
+    with TestClient(app) as client:
+        client.post("/api/demo/reset")
+        with SessionLocal() as db:
+            job = Job(
+                source="test",
+                external_id="stretch-list-test",
+                title="Mid Backend Engineer",
+                company="Test Co",
+                location_text="Bogotá, Colombia",
+                city="Bogotá",
+                country="Colombia",
+                remote_type="onsite",
+                remote_scope="national",
+                seniority="mid",
+                years_experience=2,
+                posted_at=datetime.now(UTC),
+                hash="stretch-list-test-hash",
+                status="new",
+            )
+            db.add(job)
+            db.flush()
+            db.add(
+                Match(
+                    job=job,
+                    score=60,
+                    eligible=True,
+                    subscores={},
+                    reasons=["Oportunidad potencial"],
+                    gaps=[],
+                    red_flags=[],
+                    recommendation="Oportunidad potencial",
+                    model="heuristic",
+                    fit_level="stretch",
+                    stretch_reasons=["Nivel mid vs junior"],
+                )
+            )
+            db.commit()
+            job_id = job.id
+
+        hidden = client.get("/api/jobs?include_stretch=false").json()["items"]
+        assert all(item["id"] != job_id for item in hidden)
+        visible = client.get("/api/jobs?include_stretch=true").json()["items"]
+        assert any(item["id"] == job_id and item["match"]["fit_level"] == "stretch" for item in visible)
+
+        with SessionLocal() as db:
+            job = db.get(Job, job_id)
+            if job is not None:
+                db.delete(job)
+                db.commit()
         client.post("/api/demo/reset")

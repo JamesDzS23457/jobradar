@@ -105,6 +105,23 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
             </span>
           </div>
         )}
+        {match.fit_level === "stretch" && (
+          <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">
+              <Sparkles className="h-3.5 w-3.5" /> Oportunidad potencial
+            </p>
+            <ul className="mt-2 space-y-1">
+              {match.stretch_reasons.map((reason) => (
+                <li key={reason} className="text-[11px] leading-relaxed text-amber-100/75">
+                  · {reason}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[10px] leading-relaxed text-amber-100/50">
+              No es una coincidencia exacta, pero tu experiencia y stack podrían alcanzar para una entrevista.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-5 p-5">

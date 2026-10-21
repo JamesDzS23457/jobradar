@@ -8,6 +8,8 @@ export type Match = {
   red_flags: string[];
   recommendation: string;
   model: string;
+  fit_level: "exact" | "stretch" | "not_fit" | "link_only";
+  stretch_reasons: string[];
 };
 
 export type ExperienceItem = {
@@ -135,6 +137,7 @@ export type Dashboard = {
   stats: {
     total_jobs: number;
     eligible_jobs: number;
+    potential_jobs: number;
     excellent: number;
     good: number;
     applied: number;

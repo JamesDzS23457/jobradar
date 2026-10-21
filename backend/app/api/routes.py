@@ -487,6 +487,7 @@ def list_jobs(
     saved: bool = Query(default=False),
     discarded: bool = Query(default=False),
     include_ineligible: bool = Query(default=False),
+    include_stretch: bool = Query(default=True),
     max_age_days: int | None = Query(default=None, ge=1, le=365),
     include_unknown_date: bool = Query(default=False),
     limit: int = Query(default=60, ge=1, le=200),
@@ -513,6 +514,8 @@ def list_jobs(
     for job in jobs:
         match = job.match
         if not include_ineligible and (match is None or not match.eligible):
+            continue
+        if not include_stretch and match is not None and match.fit_level == "stretch":
             continue
         if min_score is not None and (match is None or match.score < min_score):
             continue
@@ -878,6 +881,7 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     stats = {
         "total_jobs": len(jobs),
         "eligible_jobs": len(eligible_jobs),
+        "potential_jobs": len([job for job in eligible_jobs if job.match and job.match.fit_level == "stretch"]),
         "excellent": len([score for score in scores if score >= 85]),
         "good": len([score for score in scores if 70 <= score < 85]),
         "applied": len([app for app in applications if app.status == "applied"]),

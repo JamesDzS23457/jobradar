@@ -40,6 +40,10 @@ _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("link_only", "BOOLEAN DEFAULT 0"),
         ("collector", "VARCHAR(50) DEFAULT ''"),
     ],
+    "matches": [
+        ("fit_level", "VARCHAR(20) DEFAULT 'exact'"),
+        ("stretch_reasons", "TEXT DEFAULT '[]'"),
+    ],
     "preferences": [
         ("freshness_days", "INTEGER DEFAULT 2"),
         ("auto_submit_enabled", "BOOLEAN DEFAULT 0"),

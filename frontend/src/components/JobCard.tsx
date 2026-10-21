@@ -100,6 +100,17 @@ export function JobCard({ job, compact = false }: Props) {
           {job.match.recommendation}
         </div>
       )}
+      {job.match?.fit_level === "stretch" && (
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] leading-relaxed text-amber-100/80">
+          <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-[9px] font-bold text-amber-300">
+            !
+          </span>
+          <span>
+            <strong className="font-semibold text-amber-200">Oportunidad potencial.</strong>{" "}
+            {job.match.stretch_reasons[0] || "Tu perfil está cerca del nivel pedido."}
+          </span>
+        </div>
+      )}
 
       {(job.link_only || job.requires_login) && (
         <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] leading-relaxed text-amber-100/80">

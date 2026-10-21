@@ -13,7 +13,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Perfil desde el CV:** extrae nombre, contacto, skills, experiencia, educación e idiomas de PDF, DOCX, TXT o Markdown. Si no hay LLM configurado, usa heurísticas locales.
 - **Búsqueda desde el CV:** al subir tu hoja de vida, sugiere roles objetivo y keywords en español e inglés, y los deja editables en Ajustes.
 - **Filtro de idioma:** si tu CV declara solo español, las vacantes que exigen explícitamente inglés se marcan como no elegibles. No se descartan ofertas que solo mencionan el inglés como “plus” o “deseable”.
-- **Filtro de seniority:** no se muestran cargos por encima del nivel configurado en Ajustes. Puedes elegir **Cualquiera** para ver todos.
+- **Filtro de seniority + oportunidades potenciales:** no se muestran cargos dos niveles por encima, pero sí un nivel arriba cuando tu experiencia y stack están cerca. Puedes ocultar las potenciales con un interruptor en Vacantes. El auto-envío solo usa coincidencias exactas.
 - **Descripciones limpias:** se eliminan etiquetas HTML, entidades y texto mal codificado (`Ã³`, `Ã±`) antes de mostrar la oferta.
 - **Búsqueda con reglas de ubicación:** Bogotá y ciudades cercanas para presencial/híbrido; resto de Colombia solo con reubicación; fuera de Colombia solo remoto.
 - **Match explicable:** score de 0 a 100 con desglose por skills, rol, seniority, ubicación, idioma, salario y frescura. Cada resultado incluye razones, brechas y señales de alerta.

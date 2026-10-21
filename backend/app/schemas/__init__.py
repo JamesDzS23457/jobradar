@@ -103,6 +103,8 @@ class MatchOut(BaseModel):
     red_flags: list[str]
     recommendation: str
     model: str
+    fit_level: str = "exact"
+    stretch_reasons: list[str] = Field(default_factory=list)
 
 
 class JobSummary(BaseModel):

@@ -130,3 +130,85 @@ def test_seniority_gate_uses_title_when_metadata_is_wrong():
     result = compute_match(profile(), junior_prefs, job(title="Senior Backend Engineer", seniority="mid"))
     assert result["eligible"] is False
     assert "seniority" in result["recommendation"].lower()
+
+
+def test_mid_job_is_potential_for_junior_with_experience_and_stack():
+    candidate = profile()
+    candidate.years_experience = 2
+    junior_prefs = prefs()
+    junior_prefs.seniority = "junior"
+    result = compute_match(
+        candidate,
+        junior_prefs,
+        job(title="Mid Backend Engineer", seniority="mid", years_experience=2),
+    )
+    assert result["eligible"] is True
+    assert result["fit_level"] == "stretch"
+    assert result["recommendation"] == "Oportunidad potencial"
+    assert result["stretch_reasons"]
+    assert result["score"] > 0
+
+
+def test_three_year_mid_job_is_still_potential_for_two_year_profile():
+    candidate = profile()
+    candidate.years_experience = 2
+    junior_prefs = prefs()
+    junior_prefs.seniority = "junior"
+    result = compute_match(
+        candidate,
+        junior_prefs,
+        job(title="Mid Backend Engineer", seniority="mid", years_experience=3),
+    )
+    assert result["fit_level"] == "stretch"
+
+
+def test_senior_job_is_not_potential_for_junior_profile():
+    candidate = profile()
+    candidate.years_experience = 2
+    junior_prefs = prefs()
+    junior_prefs.seniority = "junior"
+    result = compute_match(
+        candidate,
+        junior_prefs,
+        job(title="Senior Backend Engineer", seniority="senior", years_experience=5),
+    )
+    assert result["eligible"] is False
+    assert result["fit_level"] == "not_fit"
+
+
+def test_stretch_job_is_skipped_by_auto_run_eligibility():
+    from app.core.db import SessionLocal
+    from app.models import Match
+    from app.services.applications import _eligible_jobs
+
+    with SessionLocal() as db:
+        job = Job(
+            source="test",
+            external_id="stretch-auto-run",
+            title="Mid Backend Engineer",
+            company="Test Co",
+            location_text="Bogotá, Colombia",
+            city="Bogotá",
+            country="Colombia",
+            remote_type="onsite",
+            remote_scope="national",
+            seniority="mid",
+            years_experience=2,
+            posted_at=datetime.now(UTC),
+            hash="stretch-auto-run-hash",
+            status="new",
+        )
+        db.add(job)
+        db.flush()
+        db.add(Match(job=job, score=70, eligible=True, fit_level="stretch"))
+        db.commit()
+        prefs = Preferences(
+            id=99,
+            home_city="Bogotá",
+            country="Colombia",
+            freshness_days=2,
+        )
+        eligible = _eligible_jobs(db, prefs)
+        assert all(item.id != job.id for item in eligible)
+        db.delete(job)
+        db.commit()

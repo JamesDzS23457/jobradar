@@ -126,7 +126,7 @@ export function DashboardPage() {
         <StatCard
           label="Ofertas elegibles"
           value={data.stats.eligible_jobs}
-          hint={`de ${data.stats.total_jobs} revisadas · todas las fechas`}
+          hint={`${data.stats.potential_jobs} potenciales · ${data.stats.total_jobs} revisadas`}
           icon={BriefcaseBusiness}
         />
         <StatCard
