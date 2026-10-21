@@ -77,6 +77,13 @@ BRAVE_SEARCH_API_KEY=
 - `JOOBLE_API_KEY`: Jooble. Útil para empleos locales.
 - `BRAVE_SEARCH_API_KEY`: descubrimiento web de ofertas públicas con datos estructurados.
 
+
+### Importante sobre JSearch
+
+La clave debe ser de la API **JSearch** en RapidAPI, no una clave genérica de otra API. El plan gratuito suele incluir unas 200 solicitudes al mes. En JobRadar cada **Buscar ahora** consume 1 solicitud y usa el endpoint actual `/search-v2`.
+
+Si RapidAPI responde `Endpoint '/search' does not exist`, estás usando una versión antigua del cliente; en este proyecto ya está corregido a `/search-v2`.
+
 ### Importante sobre Jooble
 
 Consigue la clave de Colombia en [co.jooble.org/api/about](https://co.jooble.org/api/about). Una clave generada en `jooble.org` es para Estados Unidos y no sirve para Colombia.
