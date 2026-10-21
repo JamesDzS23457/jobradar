@@ -113,6 +113,8 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `SEARCH_INTERVAL_HOURS` | Frecuencia de búsqueda automática (default 6). |
 | `TIMEZONE` | Zona horaria del scheduler (default `America/Bogota`). |
 
+> **Proveedor de IA:** JobRadar usa únicamente **OpenRouter**. Los IDs `nvidia/...` son el namespace de modelos de NVIDIA dentro de OpenRouter; no se usa la API directa de NVIDIA ni se requiere una segunda clave. Los tres modelos elegidos son las variantes `:free` que aparecen en el grupo de OpenRouter.
+
 ### Gmail
 
 1. Activa la verificación en dos pasos en tu cuenta de Google.
