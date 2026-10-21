@@ -25,7 +25,7 @@ TAVILY_ENDPOINT = "https://api.tavily.com/search"
 class TavilySearchSource(WebSearchSource):
     name = "tavily"
 
-    def __init__(self, api_key: str = "", keyless: bool = True, max_jobs: int = 8) -> None:
+    def __init__(self, api_key: str = "", keyless: bool = True, max_jobs: int = 10) -> None:
         self.api_key = api_key.strip()
         self.keyless = keyless
         self.max_jobs = max_jobs
@@ -58,7 +58,7 @@ class TavilySearchSource(WebSearchSource):
                         TAVILY_ENDPOINT,
                         json={
                             "query": query,
-                            "max_results": 10,
+                            "max_results": 15,
                             "search_depth": "basic",
                             "include_answer": False,
                         },
@@ -87,6 +87,20 @@ class TavilySearchSource(WebSearchSource):
                         continue
                     except Exception:  # pragma: no cover - network dependent
                         logger.exception("Could not import Tavily result %s", url)
+                        continue
+                    final_url = str(extracted.get("url") or url)
+                    if not self._looks_like_job(final_url):
+                        logger.info("Keeping link-only for redirected listing page %s", final_url)
+                        jobs.append(
+                            link_only_payload(
+                                url,
+                                "El portal redirigió a una página de listado o requiere iniciar sesión. "
+                                "Abre el enlace original para ver la vacante y postularte.",
+                                collector="tavily",
+                            )
+                        )
+                        if len(jobs) >= self.max_jobs:
+                            return jobs
                         continue
                     extracted["collector"] = "tavily"
                     jobs.append(extracted)

@@ -117,6 +117,7 @@ export function JobsPage() {
   const { data: dashboardSnapshot } = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
   const eligibleTotal = dashboardSnapshot?.stats.eligible_jobs;
   const showing = data?.total ?? 0;
+  const unknownDateCount = data?.unknown_date_count ?? 0;
   const hiddenByFilters = !showDiscarded && eligibleTotal !== undefined && showing < eligibleTotal;
 
   const hasFilters = Boolean(
@@ -209,6 +210,29 @@ export function JobsPage() {
               Limpiar filtros
             </button>
           </div>
+        </section>
+      )}
+
+      {!includeUnknownDate && unknownDateCount > 0 && (
+        <section className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-400/20 bg-slate-400/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+            <div>
+              <p className="text-xs font-semibold text-slate-200">
+                {unknownDateCount} oferta{unknownDateCount === 1 ? "" : "s"} sin fecha están ocultas.
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                Algunos portales como Indeed no siempre publican una fecha clara. Puedes incluirlas para revisarlas.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIncludeUnknownDate(true)}
+            className="btn-secondary shrink-0 px-3 py-2 text-xs"
+          >
+            Incluir sin fecha
+          </button>
         </section>
       )}
 

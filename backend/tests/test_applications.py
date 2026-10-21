@@ -144,16 +144,17 @@ def test_freshness_filter_and_unknown_dates():
             unknown_job.posted_at = None
             db.commit()
 
-        filtered_ids = {item["id"] for item in client.get("/api/jobs?max_age_days=2").json()["items"]}
+        filtered_payload = client.get("/api/jobs?max_age_days=2").json()
+        filtered_ids = {item["id"] for item in filtered_payload["items"]}
         assert old_id not in filtered_ids
         assert unknown_id not in filtered_ids
+        assert filtered_payload["unknown_date_count"] >= 1
 
-        with_unknown = {
-            item["id"]
-            for item in client.get("/api/jobs?max_age_days=2&include_unknown_date=true").json()["items"]
-        }
+        with_unknown_payload = client.get("/api/jobs?max_age_days=2&include_unknown_date=true").json()
+        with_unknown = {item["id"] for item in with_unknown_payload["items"]}
         assert unknown_id in with_unknown
         assert old_id not in with_unknown
+        assert with_unknown_payload["unknown_date_count"] == 0
 
         all_ids = {item["id"] for item in client.get("/api/jobs").json()["items"]}
         assert old_id in all_ids

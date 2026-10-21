@@ -202,6 +202,20 @@ En **Vacantes** puedes activar o desactivar **Incluir oportunidades potenciales*
 
 El **auto-envío** ignora las potenciales: solo procesa coincidencias exactas.
 
+
+### Fechas y Indeed
+
+JSearch consulta Indeed y otros portales con un rango de fecha que depende de tu frescura:
+
+- 24 h → `today`
+- 48 h / 3 días → `3days`
+- 7 días → `week`
+- Más → `month`
+
+Si un portal no publica fecha, la vacante se oculta por defecto. En **Vacantes** aparecerá un aviso con cuántas quedaron ocultas y un botón **Incluir sin fecha**.
+
+Tavily también busca fuera de los portales fijos mediante consultas públicas y guarda como link-only los enlaces que redirigen a listados o requieren login. Nunca inicia sesión ni evade bloqueos.
+
 ## 5. Asistente y auto-envío
 
 ```env

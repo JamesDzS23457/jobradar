@@ -494,7 +494,7 @@ def list_jobs(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
-    stmt = select(Job).options(selectinload(Job.match)).order_by(Job.posted_at.desc())
+    stmt = select(Job).options(selectinload(Job.match))
     stmt = stmt.where(Job.status == "discarded") if discarded else stmt.where(Job.status != "discarded")
     if q:
         pattern = f"%{q.strip()}%"
@@ -503,14 +503,10 @@ def list_jobs(
         stmt = stmt.where(Job.remote_type == remote_type)
     if saved:
         stmt = stmt.where(Job.status == "saved")
-    if max_age_days is not None:
-        cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
-        freshness = (Job.posted_at >= cutoff) | Job.imported_manually.is_(True) | Job.link_only.is_(True)
-        if include_unknown_date:
-            freshness = freshness | Job.posted_at.is_(None)
-        stmt = stmt.where(freshness)
     jobs = list(db.scalars(stmt).all())
+    cutoff = datetime.now(UTC) - timedelta(days=max_age_days) if max_age_days is not None else None
     items = []
+    unknown_date_count = 0
     for job in jobs:
         match = job.match
         if not include_ineligible and (match is None or not match.eligible):
@@ -519,6 +515,17 @@ def list_jobs(
             continue
         if min_score is not None and (match is None or match.score < min_score):
             continue
+        if cutoff is not None and not (job.imported_manually or job.link_only):
+            if job.posted_at is None:
+                if not include_unknown_date:
+                    unknown_date_count += 1
+                    continue
+            else:
+                posted_at = job.posted_at
+                if posted_at.tzinfo is None:
+                    posted_at = posted_at.replace(tzinfo=UTC)
+                if posted_at < cutoff:
+                    continue
         items.append(_job_dict(job))
 
     def sort_key(item: dict) -> tuple[float, float]:
@@ -528,7 +535,11 @@ def list_jobs(
 
     items.sort(key=sort_key, reverse=True)
     total = len(items)
-    return {"items": items[offset : offset + limit], "total": total}
+    return {
+        "items": items[offset : offset + limit],
+        "total": total,
+        "unknown_date_count": unknown_date_count,
+    }
 
 
 @router.get("/jobs/{job_id}")

@@ -70,6 +70,17 @@ class JSearchSource(JobSource):
             data = data.get("jobs") or []
         return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
+    @staticmethod
+    def _date_posted(prefs: Preferences) -> str:
+        days = max(1, int(prefs.freshness_days or 2))
+        if days <= 1:
+            return "today"
+        if days <= 3:
+            return "3days"
+        if days <= 7:
+            return "week"
+        return "month"
+
     def fetch(self, prefs: Preferences) -> list[dict[str, Any]]:
         roles = [str(role).strip() for role in (prefs.roles or prefs.keywords or ["backend developer"]) if str(role).strip()]
         role_terms = " OR ".join(roles[:2]) or "backend developer"
@@ -93,7 +104,7 @@ class JSearchSource(JobSource):
                         "query": query,
                         "page": "1",
                         "num_pages": "1",
-                        "date_posted": "month",
+                        "date_posted": self._date_posted(prefs),
                         "country": "co",
                     },
                 )

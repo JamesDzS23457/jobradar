@@ -63,3 +63,14 @@ def test_normalize_job_data_does_not_treat_english_plus_as_requirement():
     )
     assert optional["languages"] == {}
     assert required["languages"] == {"Inglés": "B2"}
+
+
+def test_jsearch_date_posted_matches_freshness_preference():
+    from app.models import Preferences
+
+    source = JSearchSource("test-key")
+    assert source._date_posted(Preferences(freshness_days=1)) == "today"
+    assert source._date_posted(Preferences(freshness_days=2)) == "3days"
+    assert source._date_posted(Preferences(freshness_days=3)) == "3days"
+    assert source._date_posted(Preferences(freshness_days=7)) == "week"
+    assert source._date_posted(Preferences(freshness_days=30)) == "month"

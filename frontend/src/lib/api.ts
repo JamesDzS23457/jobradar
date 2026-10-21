@@ -93,7 +93,7 @@ export const api = {
     max_age_days?: number;
     include_unknown_date?: boolean;
     limit?: number;
-  } = {}) => request<{ items: Job[]; total: number }>(`/api/jobs${queryString(params)}`),
+  } = {}) => request<{ items: Job[]; total: number; unknown_date_count?: number }>(`/api/jobs${queryString(params)}`),
   job: (id: number) => request<{ job: Job }>(`/api/jobs/${id}`),
   importJob: (url: string) =>
     request<{ job: Job; created: boolean; extracted_with: string; link_only?: boolean; message?: string }>("/api/jobs/import-url", {

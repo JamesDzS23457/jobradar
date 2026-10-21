@@ -46,6 +46,25 @@ JOB_HOSTS = {
     "teamtailor.com",
 }
 JOB_PATH_MARKERS = ("/job/", "/jobs/", "/empleo", "/careers/", "/vacante", "/offer", "/position")
+DETAIL_PATH_MARKERS = (
+    "/oferta-de-trabajo",
+    "/jobs/view/",
+    "/viewjob",
+    "/job-listing/",
+    "/job/",
+    "/careers/",
+    "/oferta/",
+    "/empleo/oferta",
+)
+LISTING_PATH_MARKERS = (
+    "/jobs?",
+    "/jobs/search",
+    "/empleos",
+    "/ofertas-de-trabajo",
+    "/bolsa-de-empleo",
+    "/search?",
+    "/q-",
+)
 MANUAL_HOSTS = {
     "linkedin.com",
     "indeed.com",
@@ -59,7 +78,7 @@ MANUAL_HOSTS = {
 class WebSearchSource(JobSource):
     name = "websearch"
 
-    def __init__(self, api_key: str, max_jobs: int = 8) -> None:
+    def __init__(self, api_key: str, max_jobs: int = 10) -> None:
         self.api_key = api_key
         self.max_jobs = max_jobs
 
@@ -110,6 +129,20 @@ class WebSearchSource(JobSource):
                     except Exception:  # pragma: no cover - network dependent
                         logger.exception("Could not import web result %s", url)
                         continue
+                    final_url = str(extracted.get("url") or url)
+                    if not self._looks_like_job(final_url):
+                        logger.info("Keeping link-only for redirected listing page %s", final_url)
+                        jobs.append(
+                            link_only_payload(
+                                url,
+                                "El portal redirigió a una página de listado o requiere iniciar sesión. "
+                                "Abre el enlace original para ver la vacante y postularte.",
+                                collector="websearch",
+                            )
+                        )
+                        if len(jobs) >= self.max_jobs:
+                            return jobs
+                        continue
                     extracted["collector"] = "websearch"
                     jobs.append(extracted)
                     if len(jobs) >= self.max_jobs:
@@ -120,15 +153,19 @@ class WebSearchSource(JobSource):
         roles = [role.strip() for role in (prefs.roles or []) if role.strip()] or ["backend developer"]
         city = prefs.home_city or "Bogotá"
         country = prefs.country or "Colombia"
-        queries: list[str] = []
-        for role in roles[:2]:
-            queries.append(f'"{role}" "{city}" {country} empleo')
-            queries.append(f'site:computrabajo.com.co "{role}" "{city}"')
-            queries.append(f'site:elempleo.com "{role}" "{city}"')
-        if roles:
-            queries.append(f'site:getonbrd.com "{roles[0]}"')
-            queries.append(f'site:torre.ai "{roles[0]}"')
-        return queries[:6]
+        primary = roles[0]
+        secondary = roles[1] if len(roles) > 1 else primary
+        queries = [
+            f'site:computrabajo.com.co "oferta de trabajo" "{primary}" "{city}"',
+            f'site:elempleo.com "oferta de empleo" "{primary}" "{city}"',
+            f'site:magneto.com.co "{primary}" "{city}"',
+            f'site:linkedin.com/jobs/view "{primary}" "{city}"',
+            f'site:indeed.com/viewjob "{primary}" "{city}"',
+            f'"{primary}" "{city}" {country} empleo -site:linkedin.com -site:indeed.com',
+            f'"{secondary}" "{city}" {country} empleo',
+            f'"{primary}" "careers" "{city}" {country}',
+        ]
+        return queries[:8]
 
     @staticmethod
     def _is_manual_host(url: str) -> bool:
@@ -139,7 +176,21 @@ class WebSearchSource(JobSource):
     def _looks_like_job(url: str) -> bool:
         parsed = urlparse(url)
         host = (parsed.hostname or "").lower().removeprefix("www.")
+        path = parsed.path.lower()
+        if any(marker in path for marker in DETAIL_PATH_MARKERS):
+            return True
+        if any(host == item or host.endswith(f".{item}") for item in ("linkedin.com", "indeed.com", "glassdoor.com")):
+            return False
+        if host == "elempleo.com" or host.endswith(".elempleo.com"):
+            if "/co/ofertas-empleo/" in path and "/trabajo-" in path:
+                return True
+        if host == "computrabajo.com" or host.endswith(".computrabajo.com"):
+            if path.startswith("/trabajo-"):
+                return False
+        if path.rstrip("/") in {"/jobs", "/empleos"} or parsed.query.lower().startswith("q="):
+            return False
+        if any(marker in path for marker in LISTING_PATH_MARKERS):
+            return False
         if any(host == job_host or host.endswith(f".{job_host}") for job_host in JOB_HOSTS):
             return True
-        path = parsed.path.lower()
         return any(marker in path for marker in JOB_PATH_MARKERS)
