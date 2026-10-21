@@ -79,11 +79,13 @@ export function JobsPage() {
     mutationFn: (enabled: boolean) => api.updatePreferences({ auto_submit_enabled: enabled }),
     onSuccess: (result, enabled) => {
       queryClient.setQueryData(["preferences"], result);
-      toast.success(
-        enabled
-          ? "Auto-envío activado. Solo se aplicará a los ATS permitidos."
-          : "Auto-envío desactivado.",
-      );
+      if (result.warning) toast.warning(result.warning);
+      else
+        toast.success(
+          enabled
+            ? "Auto-envío activado. Solo se aplicará a los ATS permitidos."
+            : "Auto-envío desactivado.",
+        );
     },
     onError: (mutationError: Error) => toast.error(mutationError.message),
   });

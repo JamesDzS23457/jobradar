@@ -97,6 +97,13 @@ function preferencesToForm(preferences: Preferences): SettingsForm {
   };
 }
 
+
+function intInRange(value: number, minimum: number, maximum: number, fallback: number): number {
+  const parsed = Math.trunc(Number(value));
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(maximum, Math.max(minimum, parsed));
+}
+
 function IntegrationRow({
   icon: Icon,
   title,
@@ -158,26 +165,27 @@ export function SettingsPage() {
       api.updatePreferences({
         roles: parseList(form.roles),
         keywords: parseList(form.keywords),
-        home_city: form.home_city.trim(),
+        home_city: form.home_city.trim() || "Bogotá",
         commute_cities: parseList(form.commute_cities),
-        country: form.country.trim(),
-        salary_min: Number(form.salary_min) || 0,
-        currency: form.currency,
+        country: form.country.trim() || "Colombia",
+        salary_min: Math.max(0, Math.trunc(Number(form.salary_min) || 0)),
+        currency: form.currency === "USD" ? "USD" : "COP",
         seniority: form.seniority,
         remote_preference: form.remote_preference,
         accept_relocation: form.accept_relocation,
         accept_international_remote: form.accept_international_remote,
-        alert_threshold: Number(form.alert_threshold) || 0,
-        digest_threshold: Number(form.digest_threshold) || 0,
-        digest_hour: Number(form.digest_hour) || 0,
-        search_interval_hours: Number(form.search_interval_hours) || 1,
-        freshness_days: Number(form.freshness_days) || 2,
+        alert_threshold: intInRange(form.alert_threshold, 0, 100, 85),
+        digest_threshold: intInRange(form.digest_threshold, 0, 100, 70),
+        digest_hour: intInRange(form.digest_hour, 0, 23, 8),
+        search_interval_hours: intInRange(form.search_interval_hours, 1, 168, 6),
+        freshness_days: intInRange(form.freshness_days, 1, 365, 2),
         auto_submit_enabled: form.auto_submit_enabled,
-        auto_submit_max_per_run: Number(form.auto_submit_max_per_run) || 5,
+        auto_submit_max_per_run: intInRange(form.auto_submit_max_per_run, 1, 20, 5),
         default_cv_source: form.default_cv_source,
       }),
-    onSuccess: () => {
-      toast.success("Preferencias guardadas y matches recalculados.");
+    onSuccess: (result) => {
+      if (result.warning) toast.warning(result.warning);
+      else toast.success("Preferencias guardadas y matches recalculados.");
       queryClient.invalidateQueries();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -281,9 +289,11 @@ export function SettingsPage() {
                   value={form.roles}
                   onChange={(event) => setForm((current) => ({ ...current, roles: event.target.value }))}
                   className="input"
-                  placeholder="Backend Developer, Backend Engineer, Python Developer"
+                  placeholder="Backend Developer, Desarrollador Backend, Python Developer, Desarrollador Python"
                 />
-                <p className="mt-1.5 text-[11px] text-muted">Sepáralos con comas. Se usan en JSearch y Jooble.</p>
+                <p className="mt-1.5 text-[11px] text-muted">
+                  Se completan al subir tu CV, en español e inglés. Puedes editarlos; se usan en JSearch y Jooble.
+                </p>
               </div>
               <div>
                 <label className="label" htmlFor="keywords">
@@ -296,6 +306,9 @@ export function SettingsPage() {
                   className="input"
                   placeholder="Python, FastAPI, AWS, PostgreSQL"
                 />
+                <p className="mt-1.5 text-[11px] text-muted">
+                  Se detectan desde tus habilidades. Añade o quita términos cuando quieras.
+                </p>
               </div>
               <div>
                 <label className="label" htmlFor="freshness_days">

@@ -6,6 +6,7 @@ import {
   Loader2,
   Plus,
   Save,
+  Search,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -13,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
@@ -96,6 +98,7 @@ export function ProfilePage() {
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [dragActive, setDragActive] = useState(false);
   const [uploadReview, setUploadReview] = useState<NonNullable<Awaited<ReturnType<typeof api.uploadCv>>["review"]> | null>(null);
+  const [searchSuggestions, setSearchSuggestions] = useState<Awaited<ReturnType<typeof api.uploadCv>>["search_suggestions"] | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["profile"],
@@ -134,8 +137,9 @@ export function ProfilePage() {
           }))
           .filter((item) => item.institution || item.degree),
       }),
-    onSuccess: () => {
-      toast.success("Perfil guardado y matches recalculados.");
+    onSuccess: (result) => {
+      if (result.warning) toast.warning(result.warning);
+      else toast.success("Perfil guardado y matches recalculados.");
       queryClient.invalidateQueries();
     },
     onError: (mutationError: Error) => toast.error(mutationError.message),
@@ -146,6 +150,7 @@ export function ProfilePage() {
     onSuccess: (result) => {
       toast.success(result.message);
       setUploadReview(result.review ?? null);
+      setSearchSuggestions(result.search_suggestions ?? null);
       setForm(profileToForm(result.profile));
       queryClient.invalidateQueries();
     },
@@ -662,6 +667,45 @@ export function ProfilePage() {
               )}
               <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
                 Corrige cualquier dato en el formulario y guarda el perfil. Los campos vacíos no se inventan.
+              </p>
+            </div>
+          )}
+
+          {searchSuggestions && (
+            <div className="card p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="section-title">Búsqueda detectada</h2>
+                  <p className="mt-1 text-[11px] text-muted">
+                    Roles y keywords que JobRadar usará para buscar. Puedes editarlos.
+                  </p>
+                </div>
+                <Link to="/settings" className="text-[11px] font-medium text-primary hover:underline">
+                  Editar
+                </Link>
+              </div>
+              <div className="mt-3">
+                <p className="label">Roles objetivo</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {searchSuggestions.roles.map((role) => (
+                    <span key={role} className="chip text-[10px]">
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="label">Keywords</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {searchSuggestions.keywords.map((keyword) => (
+                    <span key={keyword} className="chip text-[10px]">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-600">
+                <Search className="h-3 w-3" /> Detectado con {searchSuggestions.source}. Se puede modificar en Ajustes.
               </p>
             </div>
           )}

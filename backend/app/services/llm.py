@@ -73,6 +73,23 @@ Reglas estrictas:
 - Usa las palabras clave de la oferta solo cuando sean verdaderas en el perfil.
 """
 
+
+SEARCH_PROFILE_SCHEMA = """
+Devuelve SOLO un objeto JSON con esta forma:
+{
+  "roles": [string],
+  "keywords": [string]
+}
+Reglas:
+- Sugiere entre 8 y 15 roles de búsqueda adecuados para el perfil.
+- Incluye equivalentes en español e inglés para los mismos cargos.
+  Ejemplo: "Backend Developer", "Desarrollador Backend", "Backend Engineer", "Ingeniero Backend".
+- Añade variantes de seniority solo si el perfil las justifica (Junior, Senior, Lead).
+- No inventes cargos que no tengan relación con la experiencia real.
+- Sugiere entre 8 y 20 keywords técnicas basadas en las habilidades reales del perfil.
+- No incluyas empresas, ubicaciones ni palabras genéricas como "trabajo" o "empleo".
+"""
+
 ANSWER_SCHEMA = """
 Devuelve SOLO un objeto JSON con esta forma:
 {
@@ -288,6 +305,18 @@ class LLMService:
             model=self.settings.llm_model_quality,
             quality=True,
             temperature=0.25,
+        )
+
+
+    def suggest_search_profile(self, profile: dict[str, Any], cv_text: str = "") -> dict[str, Any] | None:
+        return self._chat_json(
+            "Eres un estratega de búsqueda laboral. " + SEARCH_PROFILE_SCHEMA,
+            (
+                f"PERFIL:\n{json.dumps(profile, ensure_ascii=False, default=str)}\n\n"
+                f"FRAGMENTO DEL CV:\n{cv_text[:20000]}"
+            ),
+            model=self.settings.llm_model_fast,
+            temperature=0.2,
         )
 
 

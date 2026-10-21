@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import shutil
 from datetime import UTC, datetime, timedelta
@@ -47,7 +48,13 @@ from app.services.applications import (
     start_auto_run,
     update_session_status,
 )
-from app.services.cv_parser import extract_text, find_skills, parse_profile_heuristic
+from app.services.career import suggest_search_preferences
+from app.services.cv_parser import (
+    extract_text,
+    find_skills,
+    normalize_parsed_profile,
+    parse_profile_heuristic,
+)
 from app.services.emailer import send_test_email
 from app.services.job_import import JobImportError, import_job_from_url
 from app.services.llm import llm_service
@@ -62,6 +69,8 @@ from app.services.portals import classify_portal
 from app.services.search import latest_search_run, normalize_job_data, run_search, upsert_job
 from app.services.seed import reset_demo, seed_demo
 from app.services.tailoring import export_docx, export_pdf, generate_tailored, tailored_to_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 settings = get_settings()
@@ -237,9 +246,14 @@ def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db)) -> dic
         setattr(profile, key, value)
     db.commit()
     db.refresh(profile)
-    recommend_profile = _prefs(db)
-    recompute_all(db, profile, recommend_profile)
-    return {"profile": _profile_dict(profile)}
+    warning = ""
+    try:
+        recompute_all(db, profile, _prefs(db))
+    except Exception as exc:
+        logger.exception("Profile saved but match recomputation failed")
+        db.rollback()
+        warning = f"Perfil guardado, pero no se pudieron recalcular los matches: {exc}"
+    return {"profile": _profile_dict(profile), "warning": warning}
 
 
 @router.get("/preferences")
@@ -255,9 +269,15 @@ def update_preferences(payload: PreferencesUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(prefs)
     profile = _profile(db)
+    warning = ""
     if profile is not None:
-        recompute_all(db, profile, prefs)
-    return {"preferences": prefs.as_dict()}
+        try:
+            recompute_all(db, profile, prefs)
+        except Exception as exc:
+            logger.exception("Preferences saved but match recomputation failed")
+            db.rollback()
+            warning = f"Preferencias guardadas, pero no se pudieron recalcular los matches: {exc}"
+    return {"preferences": prefs.as_dict(), "warning": warning}
 
 
 @router.post("/cv/upload")
@@ -285,6 +305,7 @@ async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db))
     parsed_with = "llm" if parsed else "heuristic"
     if not parsed:
         parsed = parse_profile_heuristic(text)
+    parsed = normalize_parsed_profile(parsed) if isinstance(parsed, dict) else {}
 
     profile = _profile(db)
     if profile is None:
@@ -324,11 +345,19 @@ async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db))
     db.refresh(profile)
 
     prefs = _prefs(db)
+    suggestions = suggest_search_preferences(profile, text)
+    if suggestions.get("roles"):
+        prefs.roles = list(suggestions["roles"])
+    if suggestions.get("keywords"):
+        prefs.keywords = list(suggestions["keywords"])
+    db.commit()
+    db.refresh(prefs)
     recompute_all(db, profile, prefs)
     return {
         "profile": _profile_dict(profile),
         "parsed_with": parsed_with,
         "skills_found": profile.skills,
+        "search_suggestions": suggestions,
         "review": {
             "name": profile.name,
             "email": profile.email,
@@ -343,9 +372,9 @@ async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db))
             "warnings": parsed.get("warnings", []) if isinstance(parsed, dict) else [],
         },
         "message": (
-            "CV procesado correctamente. Revisa los datos detectados antes de postular."
+            "CV procesado correctamente. Revisa los datos detectados y los roles de búsqueda antes de postular."
             if parsed_with == "llm"
-            else "CV procesado con el lector local. Revisa los datos detectados y corrige lo que falte."
+            else "CV procesado con el lector local. Revisa los datos detectados y los roles de búsqueda."
         ),
     }
 

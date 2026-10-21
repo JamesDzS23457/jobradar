@@ -124,15 +124,29 @@ def extract_name(text: str) -> str:
 def extract_languages(text: str) -> dict[str, str]:
     languages: dict[str, str] = {}
     normalized = text.lower()
+    level_pattern = r"(nativo|native|fluido|fluent|avanzado|advanced|intermedio|intermediate|b[aá]sico|basic|[abc][12])"
     patterns = {
-        "Español": r"(español|spanish)\s*[:\-]?\s*(nativo|native|[abc][12])",
-        "Inglés": r"(inglés|english)\s*[:\-]?\s*(nativo|native|[abc][12])",
+        "Español": rf"(español|spanish)\s*[:\(\-]*\s*{level_pattern}",
+        "Inglés": rf"(inglés|english)\s*[:\(\-]*\s*{level_pattern}",
+    }
+    level_map = {
+        "NATIVO": "Nativo",
+        "NATIVE": "Nativo",
+        "FLUIDO": "C1",
+        "FLUENT": "C1",
+        "AVANZADO": "C1",
+        "ADVANCED": "C1",
+        "INTERMEDIO": "B2",
+        "INTERMEDIATE": "B2",
+        "BÁSICO": "A2",
+        "BASICO": "A2",
+        "BASIC": "A2",
     }
     for language, pattern in patterns.items():
         match = re.search(pattern, normalized)
         if match:
             level = match.group(2).upper()
-            languages[language] = "Nativo" if level in {"NATIVO", "NATIVE"} else level
+            languages[language] = level_map.get(level, level)
     if "Español" not in languages and ("español" in normalized or "spanish" in normalized):
         languages["Español"] = "Nativo"
     return languages
@@ -283,6 +297,83 @@ def extract_education(text: str) -> list[dict[str, Any]]:
             deduped.append(item)
     return deduped[:6]
 
+
+
+def _as_text(value: Any) -> str:
+    return str(value).strip() if value is not None else ""
+
+
+def _as_text_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = value.replace("\n", ",").split(",")
+    if not isinstance(value, list):
+        return []
+    return [text for item in value if (text := _as_text(item))]
+
+
+def normalize_parsed_profile(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Make LLM/heuristic output safe for the database and the UI."""
+    if not isinstance(parsed, dict):
+        return {}
+    experience: list[dict[str, Any]] = []
+    for item in parsed.get("experience") or []:
+        if not isinstance(item, dict):
+            continue
+        experience.append(
+            {
+                "company": _as_text(item.get("company")),
+                "role": _as_text(item.get("role")),
+                "dates": _as_text(item.get("dates")),
+                "bullets": _as_text_list(item.get("bullets")),
+            }
+        )
+    education: list[dict[str, Any]] = []
+    for item in parsed.get("education") or []:
+        if not isinstance(item, dict):
+            continue
+        education.append(
+            {
+                "institution": _as_text(item.get("institution")),
+                "degree": _as_text(item.get("degree")),
+                "dates": _as_text(item.get("dates")),
+            }
+        )
+    raw_languages = parsed.get("languages") or {}
+    languages: dict[str, str] = {}
+    if isinstance(raw_languages, dict):
+        languages = {_as_text(key): _as_text(value) for key, value in raw_languages.items() if _as_text(key)}
+    elif isinstance(raw_languages, list):
+        for item in raw_languages:
+            text = _as_text(item)
+            if ":" in text:
+                language, level = text.split(":", 1)
+                languages[_as_text(language)] = _as_text(level) or "B2"
+    raw_links = parsed.get("links") or {}
+    links = (
+        {_as_text(key): _as_text(value) for key, value in raw_links.items() if _as_text(key)}
+        if isinstance(raw_links, dict)
+        else {}
+    )
+    try:
+        years = int(parsed.get("years_experience") or 0)
+    except (TypeError, ValueError):
+        years = 0
+    return {
+        **parsed,
+        "name": _as_text(parsed.get("name")),
+        "email": _as_text(parsed.get("email")),
+        "phone": _as_text(parsed.get("phone")),
+        "location": _as_text(parsed.get("location")),
+        "headline": _as_text(parsed.get("headline")),
+        "summary": _as_text(parsed.get("summary")),
+        "skills": _as_text_list(parsed.get("skills")),
+        "experience": experience,
+        "education": education,
+        "languages": languages,
+        "links": links,
+        "years_experience": max(0, years),
+        "warnings": _as_text_list(parsed.get("warnings")),
+    }
 
 def parse_profile_heuristic(text: str) -> dict[str, Any]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]

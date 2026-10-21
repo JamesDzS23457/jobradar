@@ -10,6 +10,7 @@ from app.core.config import Settings
 from app.models import AlertLog, Job, Match, Preferences, Profile, SearchRun
 from app.services.cv_parser import find_skills
 from app.services.emailer import send_match_alerts
+from app.services.language import infer_job_languages
 from app.services.location import infer_remote_scope, infer_remote_type, seniority_from_title
 from app.services.matching import canonical_skill, recompute_all
 from app.services.sources import get_sources
@@ -115,8 +116,8 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
         dict.fromkeys(canonical_skill(skill) for skill in (data.get("skills_nice") or []) if str(skill).strip())
     )
     languages = data.get("languages") or {}
-    if not languages and any(word in description.lower() for word in ("english", "inglés", "ingles")):
-        languages = {"Inglés": "B2"}
+    if not languages:
+        languages = infer_job_languages(f"{title}\n{description}")
     normalized = {
         "source": _clip(data.get("source") or "unknown", 50),
         "external_id": _clip(data.get("external_id") or "", 200),

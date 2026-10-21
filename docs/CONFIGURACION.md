@@ -99,6 +99,25 @@ En JobRadar, si la clave está configurada, cada ejecución de **Buscar ahora** 
 
 Si no tienes estas claves, JobRadar igual consulta Remotive y RemoteOK, y siempre puedes usar **Importar por URL** para cualquier vacante pública. Para buscar empleos presenciales o híbridos en Bogotá, JSearch, Jooble o Brave ayudan bastante.
 
+
+## 4.1 Roles y keywords automáticos desde el CV
+
+Al subir o reemplazar tu CV, JobRadar:
+
+- Detecta roles compatibles con tu experiencia.
+- Los guarda en español e inglés en **Ajustes → Búsqueda → Roles objetivo**.
+- Completa **Keywords extra** con tus habilidades reales.
+- Marca los roles y keywords como editables: puedes borrar, añadir o cambiar el orden.
+
+Ejemplo de roles generados para un perfil backend:
+
+```text
+Backend Developer, Desarrollador Backend, Backend Engineer,
+Ingeniero Backend, Python Developer, Desarrollador Python
+```
+
+Si tu CV dice que solo hablas español, JobRadar no te mostrará como elegibles las vacantes que exijan inglés de forma explícita. Las que digan “English is a plus” o “inglés deseable” no se descartan por ese motivo.
+
 ## 5. Asistente y auto-envío
 
 ```env

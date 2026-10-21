@@ -50,3 +50,16 @@ def test_jsearch_parses_relative_dates():
 def test_jsearch_parses_iso_dates():
     parsed = _parse_posted_at({"job_posted_at_datetime_utc": "2026-10-20T12:00:00Z"})
     assert parsed == datetime(2026, 10, 20, 12, 0, tzinfo=UTC)
+
+
+def test_normalize_job_data_does_not_treat_english_plus_as_requirement():
+    from app.services.search import normalize_job_data
+
+    optional = normalize_job_data(
+        {"title": "Backend Developer", "description": "English is a plus. Python y FastAPI.", "url": "https://example.com/1"}
+    )
+    required = normalize_job_data(
+        {"title": "Backend Developer", "description": "English B2 is required. Python y FastAPI.", "url": "https://example.com/2"}
+    )
+    assert optional["languages"] == {}
+    assert required["languages"] == {"Inglés": "B2"}

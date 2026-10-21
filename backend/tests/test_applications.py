@@ -183,7 +183,13 @@ def test_original_cv_endpoint_returns_uploaded_file():
             },
         )
         assert uploaded.status_code == 200
-        assert uploaded.json()["profile"]["has_cv"] is True
+        payload = uploaded.json()
+        assert payload["profile"]["has_cv"] is True
+        suggestions = payload["search_suggestions"]
+        assert "Backend Developer" in suggestions["roles"]
+        assert "Desarrollador Backend" in suggestions["roles"]
+        prefs = client.get("/api/preferences").json()["preferences"]
+        assert "Backend Developer" in prefs["roles"]
 
         original = client.get("/api/cv/original")
         assert original.status_code == 200

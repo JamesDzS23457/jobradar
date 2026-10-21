@@ -18,7 +18,8 @@ class JoobleSource(JobSource):
         self.api_key = api_key
 
     def fetch(self, prefs: Preferences) -> list[dict[str, Any]]:
-        keywords = ", ".join(prefs.roles or prefs.keywords or ["backend developer"])
+        roles = [str(role).strip() for role in (prefs.roles or prefs.keywords or ["backend developer"]) if str(role).strip()]
+        keywords = ", ".join(roles[:6]) or "backend developer"
         body = {"keywords": keywords, "location": prefs.home_city or "Bogotá"}
         try:
             response = httpx.post(

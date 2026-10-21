@@ -83,3 +83,29 @@ def test_low_match_for_unrelated_stack():
     )
     assert result["eligible"] is True
     assert result["score"] < 70
+
+
+def test_spanish_only_profile_excludes_english_required_job():
+    spanish_only = profile()
+    spanish_only.languages = {"Español": "Nativo"}
+    result = compute_match(spanish_only, prefs(), job(languages={"Inglés": "B2"}))
+    assert result["eligible"] is False
+    assert "idioma" in result["recommendation"].lower()
+
+
+def test_english_not_required_when_description_says_it_is_a_plus():
+    spanish_only = profile()
+    spanish_only.languages = {"Español": "Nativo"}
+    result = compute_match(
+        spanish_only,
+        prefs(),
+        job(languages={}, description="English is a plus. Trabajo backend con Python."),
+    )
+    assert result["eligible"] is True
+
+
+def test_infer_job_languages_handles_explicit_and_optional_requirements():
+    from app.services.language import infer_job_languages
+
+    assert infer_job_languages("Requisitos: Inglés B2 obligatorio.") == {"Inglés": "B2"}
+    assert infer_job_languages("English is a plus, no es obligatorio.") == {}

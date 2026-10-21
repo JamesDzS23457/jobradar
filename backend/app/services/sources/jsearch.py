@@ -71,13 +71,13 @@ class JSearchSource(JobSource):
         return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
     def fetch(self, prefs: Preferences) -> list[dict[str, Any]]:
-        roles = prefs.roles or prefs.keywords or ["backend developer"]
-        role = roles[0]
+        roles = [str(role).strip() for role in (prefs.roles or prefs.keywords or ["backend developer"]) if str(role).strip()]
+        role_terms = " OR ".join(roles[:2]) or "backend developer"
         location = prefs.home_city or "Bogotá"
         query = (
-            f"remote {role} jobs in Colombia"
+            f"remote {role_terms} jobs in Colombia"
             if prefs.remote_preference == "remote"
-            else f"{role} jobs in {location}, Colombia"
+            else f"{role_terms} jobs in {location}, Colombia"
         )
         headers = {
             "X-RapidAPI-Key": self.api_key,

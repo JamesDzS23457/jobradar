@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Job, Match, Preferences, Profile
 from app.services.cv_parser import ALIASES
+from app.services.language import infer_job_languages
 from app.services.location import location_fit
 
 WEIGHTS = {
@@ -152,11 +153,11 @@ def language_key(value: str) -> str:
     return normalized
 
 
-def language_score(profile: Profile, job: Job) -> tuple[float, list[str]]:
-    required = job.languages or {}
+def language_score(profile: Profile, job: Job, required: dict[str, str] | None = None) -> tuple[float, list[str]]:
+    required = required if required is not None else _required_languages(job)
     if not required:
         return 1.0, []
-    profile_languages = {language_key(key): value for key, value in (profile.languages or {}).items()}
+    profile_languages = _profile_languages(profile)
     scores: list[float] = []
     gaps: list[str] = []
     for language, level in required.items():
@@ -220,35 +221,66 @@ def recommendation_for(score: float) -> str:
     return "Match bajo"
 
 
+def ineligible_match(job: Job, reason: str, recommendation: str = "No elegible") -> dict[str, Any]:
+    return {
+        "score": 0.0,
+        "eligible": False,
+        "subscores": {
+            "skills": 0.0,
+            "title": 0.0,
+            "seniority": 0.0,
+            "location": 0.0,
+            "language": 0.0,
+            "salary": 0.0,
+            "freshness": 0.0,
+        },
+        "reasons": [reason],
+        "gaps": [],
+        "red_flags": job.red_flags or [],
+        "recommendation": recommendation,
+        "model": "heuristic",
+    }
+
+
+def _required_languages(job: Job) -> dict[str, str]:
+    # Prefer explicit language requirements found in the text over legacy
+    # stored values that may have been inferred too broadly.
+    inferred = infer_job_languages(f"{job.title}\n{job.description}")
+    if inferred:
+        return inferred
+    return job.languages if isinstance(job.languages, dict) else {}
+
+
+def _profile_languages(profile: Profile) -> dict[str, str]:
+    languages = profile.languages if isinstance(profile.languages, dict) else {}
+    return {language_key(key): value for key, value in languages.items()}
+
+
 def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, Any]:
     location_value, eligible, location_reason = location_fit(job, prefs)
 
     if not eligible:
-        return {
-            "score": 0.0,
-            "eligible": False,
-            "subscores": {
-                "skills": 0.0,
-                "title": 0.0,
-                "seniority": 0.0,
-                "location": 0.0,
-                "language": 0.0,
-                "salary": 0.0,
-                "freshness": 0.0,
-            },
-            "reasons": [location_reason],
-            "gaps": [],
-            "red_flags": job.red_flags or [],
-            "recommendation": "No elegible por ubicación",
-            "model": "heuristic",
-        }
+        return ineligible_match(job, location_reason, "No elegible por ubicación")
+
+    required_languages = _required_languages(job)
+    profile_languages = _profile_languages(profile)
+    if profile_languages:
+        for language, level in required_languages.items():
+            required_level = LEVELS.get(str(level).strip().lower(), 0)
+            current_level = LEVELS.get(str(profile_languages.get(language_key(language), "")).strip().lower(), 0)
+            if required_level > 0 and current_level == 0:
+                return ineligible_match(
+                    job,
+                    f"La vacante exige {language} {level} y tu CV no acredita ese idioma",
+                    "No elegible por idioma",
+                )
 
     skills_value, matched_skills, missing_skills = skill_score(
         profile.skills or [], job.skills_required or [], job.skills_nice or []
     )
     title_value = title_similarity(profile, job)
     seniority_value = seniority_score(profile.years_experience or 0, job)
-    language_value, language_gaps = language_score(profile, job)
+    language_value, language_gaps = language_score(profile, job, required_languages)
     salary_value = salary_score(prefs, job)
     freshness_value = freshness_score(job.posted_at)
 

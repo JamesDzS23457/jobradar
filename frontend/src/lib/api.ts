@@ -17,23 +17,56 @@ export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 
 
 type RequestOptions = RequestInit & { body?: BodyInit | null };
 
+function describeApiDetail(item: unknown): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item === "object") {
+    const record = item as Record<string, unknown>;
+    const location = Array.isArray(record.loc)
+      ? record.loc.filter((part) => part !== "body").join(".")
+      : "";
+    const message = typeof record.msg === "string" ? record.msg : JSON.stringify(item);
+    return location ? `${location}: ${message}` : message;
+  }
+  return String(item);
+}
+
+function apiErrorMessage(payload: unknown, status: number): string {
+  if (!payload || typeof payload !== "object") return `Error ${status}`;
+  const record = payload as Record<string, unknown>;
+  if (typeof record.detail === "string") return record.detail;
+  if (Array.isArray(record.detail)) {
+    return record.detail.map(describeApiDetail).join("\n") || `Error ${status}`;
+  }
+  if (record.detail && typeof record.detail === "object") {
+    return describeApiDetail(record.detail);
+  }
+  if (typeof record.message === "string") return record.message;
+  return `Error ${status}`;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData) && options.body) {
     headers.set("Content-Type", "application/json");
   }
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!response.ok) {
-    let message = `Error ${response.status}`;
+  const raw = await response.text();
+  let payload: unknown = null;
+  if (raw) {
     try {
-      const payload = await response.json();
-      message = payload.detail || payload.message || message;
+      payload = JSON.parse(raw);
     } catch {
-      // Keep the status message.
+      payload = raw;
     }
+  }
+  if (!response.ok) {
+    const message =
+      typeof payload === "string" && payload.trim()
+        ? payload.slice(0, 800)
+        : apiErrorMessage(payload, response.status);
     throw new Error(message);
   }
-  return (await response.json()) as T;
+  return payload as T;
 }
 
 function queryString(params: Record<string, string | number | boolean | undefined>): string {
@@ -75,7 +108,7 @@ export const api = {
 
   profile: () => request<{ exists: boolean; profile: Profile | null }>("/api/profile"),
   updateProfile: (data: Partial<Profile>) =>
-    request<{ profile: Profile }>("/api/profile", { method: "PUT", body: JSON.stringify(data) }),
+    request<{ profile: Profile; warning?: string }>("/api/profile", { method: "PUT", body: JSON.stringify(data) }),
   uploadCv: (file: File) => {
     const form = new FormData();
     form.append("file", file);
@@ -83,6 +116,11 @@ export const api = {
       profile: Profile;
       parsed_with: string;
       message: string;
+      search_suggestions?: {
+        roles: string[];
+        keywords: string[];
+        source: string;
+      };
       review?: {
         name: string;
         email: string;
@@ -105,7 +143,7 @@ export const api = {
 
   preferences: () => request<{ preferences: Preferences }>("/api/preferences"),
   updatePreferences: (data: Partial<Preferences>) =>
-    request<{ preferences: Preferences }>("/api/preferences", {
+    request<{ preferences: Preferences; warning?: string }>("/api/preferences", {
       method: "PUT",
       body: JSON.stringify(data),
     }),
