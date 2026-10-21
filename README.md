@@ -102,7 +102,7 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `DEFAULT_CV_SOURCE` | `tailored` (CV adaptado ATS) u `original` (PDF original). |
 | `FRESHNESS_DAYS` | Frescura por defecto del listado (por defecto 2 días). |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). |
-| `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). El plan gratuito da 500 solicitudes por clave **en total**, no mensuales. |
+| `JOOBLE_API_KEY` | Jooble Colombia (clave de `co.jooble.org/api/about`). El plan gratuito da 500 solicitudes por clave **en total**, no mensuales. |
 | `BRAVE_SEARCH_API_KEY` | Opcional. Búsqueda web de vacantes públicas vía Brave Search (tiene plan gratuito). |
 | `SMTP_USER` / `SMTP_PASSWORD` | Gmail + contraseña de aplicación. |
 | `ALERT_TO` | Correo que recibe las alertas. |

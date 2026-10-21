@@ -79,6 +79,8 @@ BRAVE_SEARCH_API_KEY=
 
 ### Importante sobre Jooble
 
+Consigue la clave de Colombia en [co.jooble.org/api/about](https://co.jooble.org/api/about). Una clave generada en `jooble.org` es para Estados Unidos y no sirve para Colombia.
+
 El plan gratuito de Jooble permite **500 solicitudes por clave en total**, no 500 al mes. Es una cuota de por vida: no se restablece mensualmente. Además, cada dominio regional de Jooble necesita su propia clave; una clave de `jooble.org` no sirve automáticamente para otros países.
 
 En JobRadar, si la clave está configurada, cada ejecución de **Buscar ahora** consume **1 solicitud de Jooble** (se envía una sola consulta con tus roles). Una ejecución del programador también consume 1 solicitud. Para cuidar la cuota:
@@ -173,7 +175,7 @@ TIMEZONE=America/Bogota
 - `SEARCH_INTERVAL_HOURS`: cada cuántas horas busca.
 - `TIMEZONE`: zona horaria usada por el programador.
 
-Déjalo en `false` mientras estás probando. Si lo activas, el backend debe quedar corriendo.
+Déjalo en `false` mientras estás probando. Si solo tienes la clave de Jooble, ten en cuenta que cada búsqueda programada consume 1 de las 500 solicitudes totales. Si lo activas, el backend debe quedar corriendo.
 
 ## 8. Qué NO necesitas cambiar
 
