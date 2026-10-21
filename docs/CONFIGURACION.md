@@ -236,6 +236,17 @@ JobRadar calcula una URL canónica por vacante: quita `utm_*`, `trackingId`, `tr
 
 Al iniciar, también limpia duplicados antiguos y conserva la ficha con mejor estado: postulada, guardada o la más antigua.
 
+
+### Vacantes postuladas
+
+Cuando marcas una vacante como **postulada**, **entrevista** u **oferta**, deja de aparecer en **Vacantes** y en las mejores coincidencias del dashboard. Sigue disponible en **Seguimiento** con todo su historial.
+
+La API permite verlas explícitamente con:
+
+```text
+/api/jobs?show_applied=true
+```
+
 ## 5. Asistente y auto-envío
 
 ```env

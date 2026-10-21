@@ -284,3 +284,24 @@ def test_jobs_api_can_hide_or_show_stretch_matches():
                 db.delete(job)
                 db.commit()
         client.post("/api/demo/reset")
+
+
+def test_applied_jobs_are_hidden_from_job_list_by_default():
+    with TestClient(app) as client:
+        client.post("/api/demo/reset")
+        job_id = client.get("/api/jobs").json()["items"][0]["id"]
+        response = client.post("/api/applications", json={"job_id": job_id, "status": "applied"})
+        assert response.status_code == 200
+
+        default_ids = {item["id"] for item in client.get("/api/jobs").json()["items"]}
+        assert job_id not in default_ids
+
+        with_applied = {
+            item["id"]
+            for item in client.get("/api/jobs?show_applied=true").json()["items"]
+        }
+        assert job_id in with_applied
+
+        dashboard = client.get("/api/dashboard").json()
+        assert all(item["id"] != job_id for item in dashboard["top_matches"])
+        client.post("/api/demo/reset")

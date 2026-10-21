@@ -25,7 +25,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Auto-envío opcional:** desactivado por defecto. Tiene un interruptor en **Vacantes** y en **Ajustes**. Cuando lo activas, procesa en orden solo portales permitidos (Greenhouse, Lever, Ashby, Workable, Breezy y Teamtailor) y deja las demás vacantes como cartas manuales con descripción y enlace original.
 - **Portales restringidos:** LinkedIn, Indeed, Computrabajo, Magneto, elempleo y Glassdoor son solo manuales: se muestra la vacante y se abre el portal original, sin autocompletado ni envío.
 - **Frescura y descarte:** filtros de 24 h, 48 h (por defecto), 7 días o todo; las vacantes sin fecha se excluyen por defecto. Puedes descartar una vacante para que no reaparezca en búsquedas ni rondas de auto-envío.
-- **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas.
+- **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas. Cuando marcas una vacante como postulada, desaparece de Vacantes y el dashboard para evitar confusión; sigue disponible en Seguimiento.
 - **Alertas por Gmail:** correo inmediato para matches excelentes y resumen diario para los buenos.
 - **Modo demo:** funciona sin claves, sin red y sin datos reales. Ideal para probar la experiencia o mostrarla en un portafolio.
 

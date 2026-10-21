@@ -147,7 +147,7 @@ export function JobsPage() {
       <PageHeader
         eyebrow="Oportunidades"
         title="Vacantes para tu perfil"
-        description="Filtra por modalidad, score y texto. Las ofertas presenciales fuera de Colombia no entran al radar."
+        description="Filtra por modalidad, score y texto. Las postuladas pasan a Seguimiento; las ofertas presenciales fuera de Colombia no entran al radar."
         actions={
           <>
             <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/60 px-3 py-2">

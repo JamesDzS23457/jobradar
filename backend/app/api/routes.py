@@ -132,6 +132,16 @@ def _portal_dict(job: Job) -> dict[str, object]:
     return portal
 
 
+APPLIED_APPLICATION_STATUSES = {"applied", "interview", "offer"}
+
+
+def _job_is_applied(job: Job) -> bool:
+    if job.status == "applied":
+        return True
+    application = job.application
+    return application is not None and application.status in APPLIED_APPLICATION_STATUSES
+
+
 def _job_dict(job: Job, include_description: bool = False) -> dict:
     data = {
         "id": job.id,
@@ -489,13 +499,14 @@ def list_jobs(
     discarded: bool = Query(default=False),
     include_ineligible: bool = Query(default=False),
     include_stretch: bool = Query(default=True),
+    show_applied: bool = Query(default=False),
     max_age_days: int | None = Query(default=None, ge=1, le=365),
     include_unknown_date: bool = Query(default=False),
     limit: int = Query(default=60, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
-    stmt = select(Job).options(selectinload(Job.match))
+    stmt = select(Job).options(selectinload(Job.match), selectinload(Job.application))
     stmt = stmt.where(Job.status == "discarded") if discarded else stmt.where(Job.status != "discarded")
     if q:
         pattern = f"%{q.strip()}%"
@@ -515,6 +526,8 @@ def list_jobs(
         if not include_stretch and match is not None and match.fit_level == "stretch":
             continue
         if min_score is not None and (match is None or match.score < min_score):
+            continue
+        if not show_applied and not discarded and _job_is_applied(job):
             continue
         if cutoff is not None and not (job.imported_manually or job.link_only):
             if job.posted_at is None:
@@ -878,8 +891,10 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     prefs = _prefs(db)
     jobs = [
         job
-        for job in db.scalars(select(Job).options(selectinload(Job.match))).all()
-        if job.status != "discarded"
+        for job in db.scalars(
+            select(Job).options(selectinload(Job.match), selectinload(Job.application))
+        ).all()
+        if job.status != "discarded" and not _job_is_applied(job)
     ]
     eligible_jobs = [job for job in jobs if job.match and job.match.eligible]
     applications = list(
