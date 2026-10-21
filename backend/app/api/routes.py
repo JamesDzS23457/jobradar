@@ -196,7 +196,10 @@ def _run_dict(run: SearchRun | None) -> dict | None:
         "found": run.found,
         "new": run.new,
         "sources": run.sources,
-        "errors": run.errors,
+        "errors": [
+            (str(error).splitlines()[0][:300] if str(error) else "")
+            for error in (run.errors or [])
+        ],
     }
 
 

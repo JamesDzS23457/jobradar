@@ -228,7 +228,7 @@ export function ProfilePage() {
             type="button"
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
           >
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar perfil
@@ -254,7 +254,7 @@ export function ProfilePage() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
+        <div className="min-w-0 space-y-6 xl:col-span-2">
           <section className="card p-5 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -264,7 +264,7 @@ export function ProfilePage() {
               <UserRound className="h-4 w-4 text-muted" />
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div>
                 <label className="label" htmlFor="profile-name">
                   Nombre completo
@@ -393,7 +393,7 @@ export function ProfilePage() {
           </section>
 
           <section className="card p-5 sm:p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="section-title">Experiencia</h2>
                 <p className="mt-1 text-xs text-muted">Bullets concretos, con herramientas y resultados medibles.</p>
@@ -406,7 +406,7 @@ export function ProfilePage() {
                     experience: [...current.experience, { company: "", role: "", dates: "", bullets: [] }],
                   }))
                 }
-                className="btn-secondary px-3 py-2 text-xs"
+                className="btn-secondary shrink-0 px-3 py-2 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" /> Añadir
               </button>
@@ -415,7 +415,7 @@ export function ProfilePage() {
             <div className="mt-5 space-y-4">
               {form.experience.map((item, index) => (
                 <div key={index} className="rounded-xl border border-line/70 bg-white/[0.02] p-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <label className="label">Empresa</label>
                       <input
@@ -479,7 +479,7 @@ export function ProfilePage() {
           </section>
 
           <section className="card p-5 sm:p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="section-title">Educación</h2>
                 <p className="mt-1 text-xs text-muted">Títulos y formación relevante.</p>
@@ -492,7 +492,7 @@ export function ProfilePage() {
                     education: [...current.education, { institution: "", degree: "", dates: "" }],
                   }))
                 }
-                className="btn-secondary px-3 py-2 text-xs"
+                className="btn-secondary shrink-0 px-3 py-2 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" /> Añadir
               </button>
@@ -500,7 +500,7 @@ export function ProfilePage() {
 
             <div className="mt-5 space-y-3">
               {form.education.map((item, index) => (
-                <div key={index} className="grid gap-3 rounded-xl border border-line/70 bg-white/[0.02] p-4 sm:grid-cols-3">
+                <div key={index} className="grid gap-3 rounded-xl border border-line/70 bg-white/[0.02] p-4 md:grid-cols-3">
                   <div>
                     <label className="label">Institución</label>
                     <input
@@ -554,7 +554,7 @@ export function ProfilePage() {
               type="button"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
             >
               {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Guardar cambios
@@ -562,7 +562,7 @@ export function ProfilePage() {
           </div>
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+        <aside className="min-w-0 space-y-4 xl:sticky xl:top-6 xl:self-start">
           <div
             className={cn(
               "card cursor-pointer p-5 transition",
@@ -600,7 +600,7 @@ export function ProfilePage() {
               PDF, DOCX, TXT o MD. Hasta 10 MB. Extraemos texto; si es un PDF escaneado, usa DOCX o TXT.
             </p>
             {profile?.has_cv && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-line/60 bg-white/[0.02] px-3 py-2 text-[11px] text-slate-300">
+              <div className="mt-3 flex min-w-0 items-center gap-2 rounded-lg border border-line/60 bg-white/[0.02] px-3 py-2 text-[11px] text-slate-300">
                 <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span className="truncate">{profile.cv_file_name}</span>
               </div>
