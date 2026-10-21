@@ -408,7 +408,7 @@ export function TailorPage() {
                 <Sparkles className="h-3.5 w-3.5 text-primary" /> Human-in-the-loop
               </p>
               <p className="mt-2">
-                JobRadar prepara el material, pero no envía postulaciones. Tú decides qué compartir y con quién.
+                JobRadar prepara el material y el asistente puede rellenar el formulario. Tú decides qué compartir y confirmas el envío.
               </p>
             </div>
           </aside>

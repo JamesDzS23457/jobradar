@@ -15,7 +15,10 @@ import {
   Search,
   Server,
   Settings,
+  ShieldCheck,
   Trash2,
+  WandSparkles,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +44,10 @@ type SettingsForm = {
   digest_threshold: number;
   digest_hour: number;
   search_interval_hours: number;
+  freshness_days: number;
+  auto_submit_enabled: boolean;
+  auto_submit_max_per_run: number;
+  default_cv_source: "tailored" | "original";
 };
 
 const emptyForm: SettingsForm = {
@@ -59,6 +66,10 @@ const emptyForm: SettingsForm = {
   digest_threshold: 70,
   digest_hour: 8,
   search_interval_hours: 6,
+  freshness_days: 2,
+  auto_submit_enabled: false,
+  auto_submit_max_per_run: 5,
+  default_cv_source: "tailored",
 };
 
 function preferencesToForm(preferences: Preferences): SettingsForm {
@@ -78,6 +89,10 @@ function preferencesToForm(preferences: Preferences): SettingsForm {
     digest_threshold: preferences.digest_threshold ?? 70,
     digest_hour: preferences.digest_hour ?? 8,
     search_interval_hours: preferences.search_interval_hours ?? 6,
+    freshness_days: preferences.freshness_days ?? 2,
+    auto_submit_enabled: Boolean(preferences.auto_submit_enabled),
+    auto_submit_max_per_run: preferences.auto_submit_max_per_run ?? 5,
+    default_cv_source: preferences.default_cv_source || "tailored",
   };
 }
 
@@ -155,10 +170,23 @@ export function SettingsPage() {
         digest_threshold: Number(form.digest_threshold) || 0,
         digest_hour: Number(form.digest_hour) || 0,
         search_interval_hours: Number(form.search_interval_hours) || 1,
+        freshness_days: Number(form.freshness_days) || 2,
+        auto_submit_enabled: form.auto_submit_enabled,
+        auto_submit_max_per_run: Number(form.auto_submit_max_per_run) || 5,
+        default_cv_source: form.default_cv_source,
       }),
     onSuccess: () => {
       toast.success("Preferencias guardadas y matches recalculados.");
       queryClient.invalidateQueries();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const testLlmMutation = useMutation({
+    mutationFn: api.testLlm,
+    onSuccess: (result) => {
+      if (result.ok) toast.success(`${result.message} ${result.model ?? ""}`.trim());
+      else toast.error(result.message);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -267,6 +295,26 @@ export function SettingsPage() {
                   className="input"
                   placeholder="Python, FastAPI, AWS, PostgreSQL"
                 />
+              </div>
+              <div>
+                <label className="label" htmlFor="freshness_days">
+                  Frescura por defecto
+                </label>
+                <select
+                  id="freshness_days"
+                  value={form.freshness_days}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, freshness_days: Number(event.target.value) }))
+                  }
+                  className="input max-w-xs"
+                >
+                  <option value={1} className="bg-surface">Últimas 24 horas</option>
+                  <option value={2} className="bg-surface">Últimas 48 horas</option>
+                  <option value={7} className="bg-surface">Últimos 7 días</option>
+                </select>
+                <p className="mt-1.5 text-[11px] text-muted">
+                  Se aplica al listado y a las rondas de auto-envío. Las importaciones manuales por URL no se filtran.
+                </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
@@ -425,6 +473,107 @@ export function SettingsPage() {
 
           <section className="card p-5 sm:p-6">
             <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300 ring-1 ring-violet-400/20">
+                <WandSparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="section-title">Postulaciones y auto-envío</h2>
+                <p className="text-xs text-muted">
+                  El asistente rellena formularios en portales compatibles. El auto-envío es opcional y nunca se usa en
+                  portales manuales.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/60 bg-white/[0.02] p-4">
+                <input
+                  type="checkbox"
+                  checked={form.auto_submit_enabled}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, auto_submit_enabled: event.target.checked }))
+                  }
+                  className="mt-1 accent-emerald-400"
+                />
+                <span>
+                  <span className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                    <Zap className="h-3.5 w-3.5 text-emerald-300" /> Habilitar “Realizar auto-envío”
+                  </span>
+                  <span className="mt-1 block text-[11px] leading-relaxed text-muted">
+                    Cuando esté activo, aparecerá el botón en Vacantes. Solo se procesan portales permitidos; LinkedIn,
+                    Indeed, Computrabajo, Magneto, elempleo y Glassdoor siguen siendo manuales.
+                  </span>
+                </span>
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="auto_submit_max_per_run">
+                    Máximo de vacantes por ronda
+                  </label>
+                  <input
+                    id="auto_submit_max_per_run"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={form.auto_submit_max_per_run}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        auto_submit_max_per_run: Number(event.target.value),
+                      }))
+                    }
+                    className="input"
+                  />
+                  <p className="mt-1.5 text-[11px] text-muted">
+                    Se procesan en orden, una por una. Las que no se pueden automatizar quedan como cartas manuales.
+                  </p>
+                </div>
+                <div>
+                  <label className="label" htmlFor="default_cv_source">
+                    CV predeterminado
+                  </label>
+                  <select
+                    id="default_cv_source"
+                    value={form.default_cv_source}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        default_cv_source: event.target.value as "tailored" | "original",
+                      }))
+                    }
+                    className="input"
+                  >
+                    <option value="tailored" className="bg-surface">CV adaptado ATS</option>
+                    <option value="original" className="bg-surface">PDF original</option>
+                  </select>
+                  <p className="mt-1.5 text-[11px] text-muted">
+                    Siempre puedes cambiarlo en la pantalla de preparación de cada postulación.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-400/15 bg-amber-400/[0.04] p-3 text-[11px] leading-relaxed text-amber-100/70">
+                <p className="flex items-center gap-1.5 font-semibold text-amber-300">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Sin atajos peligrosos
+                </p>
+                <p className="mt-1.5">
+                  La extensión usa tu sesión real del navegador. No guarda contraseñas, no evade CAPTCHA, no simula
+                  huellas del navegador y no salta 2FA. Si el portal bloquea o pide un paso humano, la vacante se marca
+                  como manual.
+                </p>
+              </div>
+              <p className="text-[11px] text-muted">
+                Portales con auto-envío permitido:{" "}
+                <span className="text-slate-300">
+                  {(config?.auto_submit_portals ?? ["greenhouse", "lever", "ashby", "workable"]).join(", ")}
+                </span>
+              </p>
+            </div>
+          </section>
+
+          <section className="card p-5 sm:p-6">
+            <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/20">
                 <Bell className="h-4 w-4" />
               </div>
@@ -532,7 +681,11 @@ export function SettingsPage() {
                 title="IA / LLM"
                 description="Parsing avanzado y adaptación de CV."
                 connected={Boolean(config?.llm_configured)}
-                note={config?.llm_configured ? `Activo con ${config.llm_model}.` : "Sin clave: se usan heurísticas locales."}
+                note={
+                  config?.llm_configured
+                    ? `OpenRouter · ${config.llm_model_quality} (fallback: ${config.llm_model_fallback})`
+                    : "Sin clave: se usan heurísticas locales. Añade OPENROUTER/LLM_API_KEY en backend/.env."
+                }
               />
               <IntegrationRow
                 icon={Mail}
@@ -566,9 +719,18 @@ export function SettingsPage() {
 
             <button
               type="button"
+              onClick={() => testLlmMutation.mutate()}
+              disabled={!config?.llm_configured || testLlmMutation.isPending}
+              className="btn-secondary mt-4 w-full text-xs"
+            >
+              {testLlmMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+              Probar modelo de IA
+            </button>
+            <button
+              type="button"
               onClick={() => testEmailMutation.mutate()}
               disabled={testEmailMutation.isPending}
-              className="btn-secondary mt-4 w-full text-xs"
+              className="btn-secondary mt-2 w-full text-xs"
             >
               {testEmailMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
               Enviar correo de prueba

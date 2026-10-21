@@ -1,4 +1,4 @@
-.PHONY: install backend frontend dev test lint seed reset
+.PHONY: install backend frontend dev test lint extension-check seed reset
 
 install:
 	cd backend && uv sync --extra dev
@@ -19,6 +19,11 @@ test:
 lint:
 	cd backend && uv run ruff check .
 	cd frontend && npm run build
+	$(MAKE) extension-check
+
+extension-check:
+	cd extension && for file in *.js; do node --check "$$file"; done
+	python3 -m json.tool extension/manifest.json >/dev/null
 
 seed:
 	curl -s -X POST http://localhost:8000/api/demo/seed | python3 -m json.tool

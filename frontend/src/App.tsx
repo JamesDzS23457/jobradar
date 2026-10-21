@@ -1,5 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "@/components/Layout";
+import { ApplyPage } from "@/pages/ApplyPage";
+import { AutoRunPage } from "@/pages/AutoRunPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { JobDetailPage } from "@/pages/JobDetailPage";
 import { JobsPage } from "@/pages/JobsPage";
@@ -16,7 +18,9 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="jobs" element={<JobsPage />} />
         <Route path="jobs/:id" element={<JobDetailPage />} />
+        <Route path="jobs/:id/apply" element={<ApplyPage />} />
         <Route path="jobs/:id/tailor" element={<TailorPage />} />
+        <Route path="auto-run/:id" element={<AutoRunPage />} />
         <Route path="tracker" element={<TrackerPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />

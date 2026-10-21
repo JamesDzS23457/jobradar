@@ -1,6 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BriefcaseBusiness, Filter, Link2, Loader2, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ArchiveRestore,
+  BriefcaseBusiness,
+  Clock3,
+  Filter,
+  Link2,
+  Loader2,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  WandSparkles,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -15,6 +27,9 @@ export function JobsPage() {
   const [remoteType, setRemoteType] = useState("all");
   const [minScore, setMinScore] = useState(0);
   const [includeIneligible, setIncludeIneligible] = useState(false);
+  const [maxAgeDays, setMaxAgeDays] = useState(2);
+  const [includeUnknownDate, setIncludeUnknownDate] = useState(false);
+  const [showDiscarded, setShowDiscarded] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const queryClient = useQueryClient();
@@ -38,15 +53,39 @@ export function JobsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const { data: preferencesData } = useQuery({ queryKey: ["preferences"], queryFn: api.preferences });
+  const autoSubmitEnabled = Boolean(preferencesData?.preferences.auto_submit_enabled);
+  const [preferencesApplied, setPreferencesApplied] = useState(false);
+
+  useEffect(() => {
+    if (!preferencesData || preferencesApplied) return;
+    const savedFreshness = preferencesData.preferences.freshness_days || 2;
+    setMaxAgeDays([1, 2, 7].includes(savedFreshness) ? savedFreshness : 2);
+    setPreferencesApplied(true);
+  }, [preferencesData, preferencesApplied]);
+
+  const autoRunMutation = useMutation({
+    mutationFn: () => api.autoRun(preferencesData?.preferences.auto_submit_max_per_run),
+    onSuccess: ({ run }) => {
+      window.postMessage({ source: "jobradar-web", type: "START_AUTO_RUN", runId: run.id }, "*");
+      toast.success(`Ronda #${run.id} creada con ${run.total} vacante${run.total === 1 ? "" : "s"}.`);
+      navigate(`/auto-run/${run.id}`);
+    },
+    onError: (mutationError: Error) => toast.error(mutationError.message),
+  });
+
   const filters = useMemo(
     () => ({
       q: q.trim() || undefined,
       remote_type: remoteType === "all" ? undefined : remoteType,
       min_score: minScore || undefined,
       include_ineligible: includeIneligible || undefined,
+      max_age_days: maxAgeDays || undefined,
+      include_unknown_date: includeUnknownDate || undefined,
+      discarded: showDiscarded || undefined,
       limit: 100,
     }),
-    [q, remoteType, minScore, includeIneligible],
+    [q, remoteType, minScore, includeIneligible, maxAgeDays, includeUnknownDate, showDiscarded],
   );
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -54,7 +93,25 @@ export function JobsPage() {
     queryFn: () => api.jobs(filters),
   });
 
-  const hasFilters = Boolean(q || remoteType !== "all" || minScore > 0 || includeIneligible);
+  const hasFilters = Boolean(
+    q ||
+      remoteType !== "all" ||
+      minScore > 0 ||
+      includeIneligible ||
+      maxAgeDays !== 2 ||
+      includeUnknownDate ||
+      showDiscarded,
+  );
+
+  const resetFilters = () => {
+    setQ("");
+    setRemoteType("all");
+    setMinScore(0);
+    setIncludeIneligible(false);
+    setMaxAgeDays(2);
+    setIncludeUnknownDate(false);
+    setShowDiscarded(false);
+  };
 
   return (
     <div className="animate-fade-up">
@@ -64,6 +121,21 @@ export function JobsPage() {
         description="Filtra por modalidad, score y texto. Las ofertas presenciales fuera de Colombia no entran al radar."
         actions={
           <>
+            {autoSubmitEnabled && !showDiscarded && (
+              <button
+                type="button"
+                onClick={() => autoRunMutation.mutate()}
+                disabled={autoRunMutation.isPending}
+                className="btn-primary"
+              >
+                {autoRunMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <WandSparkles className="h-4 w-4" />
+                )}
+                Realizar auto-envío
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setImportOpen((open) => !open)}
@@ -111,7 +183,7 @@ export function JobsPage() {
           </form>
           <p className="mt-2 text-[11px] leading-relaxed text-muted">
             Pega el enlace público de cualquier vacante. JobRadar extrae la información, la compara con tu CV y
-            conserva el enlace original para que postules directamente en el portal.
+            conserva el enlace original. La importación manual no se bloquea por el filtro de frescura.
           </p>
         </section>
       )}
@@ -167,20 +239,58 @@ export function JobsPage() {
             </label>
 
             {hasFilters && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQ("");
-                  setRemoteType("all");
-                  setMinScore(0);
-                  setIncludeIneligible(false);
-                }}
-                className="btn-ghost px-2.5 py-2 text-xs"
-              >
+              <button type="button" onClick={resetFilters} className="btn-ghost px-2.5 py-2 text-xs">
                 <X className="h-3.5 w-3.5" /> Limpiar
               </button>
             )}
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <Clock3 className="h-3.5 w-3.5" /> Frescura
+          </span>
+          <div className="flex items-center gap-1 rounded-xl border border-line bg-ink/60 p-1">
+            {[
+              { label: "24 h", value: 1 },
+              { label: "48 h", value: 2 },
+              { label: "7 días", value: 7 },
+              { label: "Todo", value: 0 },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setMaxAgeDays(option.value)}
+                className={cn(
+                  "rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition",
+                  maxAgeDays === option.value
+                    ? "bg-primary/15 text-primary ring-1 ring-primary/20"
+                    : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-line bg-ink/60 px-3 py-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={includeUnknownDate}
+              onChange={(event) => setIncludeUnknownDate(event.target.checked)}
+              className="accent-emerald-400"
+            />
+            Incluir sin fecha
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-line bg-ink/60 px-3 py-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={showDiscarded}
+              onChange={(event) => setShowDiscarded(event.target.checked)}
+              className="accent-amber-400"
+            />
+            <ArchiveRestore className="h-3.5 w-3.5" /> Ver descartadas
+          </label>
+          <span className="text-[10px] text-slate-600">Por defecto: 48 horas, más recientes primero. Cambia el default en Ajustes.</span>
         </div>
       </section>
 
@@ -188,7 +298,7 @@ export function JobsPage() {
         <p className="text-xs text-muted">
           {isLoading ? "Buscando..." : `${data?.total ?? 0} vacante${data?.total === 1 ? "" : "s"} encontrada${data?.total === 1 ? "" : "s"}`}
         </p>
-        <p className="hidden text-[11px] text-slate-600 sm:block">Ordenadas por compatibilidad</p>
+        <p className="hidden text-[11px] text-slate-600 sm:block">Más recientes primero</p>
       </div>
 
       {isLoading ? (
@@ -222,12 +332,7 @@ export function JobsPage() {
           action={
             <button
               type="button"
-              onClick={() => {
-                setQ("");
-                setRemoteType("all");
-                setMinScore(0);
-                setIncludeIneligible(false);
-              }}
+              onClick={resetFilters}
               className="btn-secondary"
             >
               Limpiar filtros

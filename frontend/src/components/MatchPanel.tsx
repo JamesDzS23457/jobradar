@@ -1,4 +1,17 @@
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Send, ShieldAlert, Sparkles, Star } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Hand,
+  Loader2,
+  Send,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Wand2,
+  Zap,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Job } from "@/lib/types";
 import { cn, scoreLabel, scoreStroke } from "@/lib/utils";
@@ -56,6 +69,32 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
             {match.reasons[0]}
           </div>
         )}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
+              job.portal.mode === "auto_submit"
+                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                : job.portal.mode === "assisted"
+                  ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+                  : "border-amber-400/20 bg-amber-400/10 text-amber-300",
+            )}
+          >
+            {job.portal.mode === "auto_submit" ? (
+              <Zap className="h-3 w-3" />
+            ) : job.portal.mode === "assisted" ? (
+              <ShieldCheck className="h-3 w-3" />
+            ) : (
+              <Hand className="h-3 w-3" />
+            )}
+            {job.portal.mode === "auto_submit"
+              ? "Auto-envío disponible"
+              : job.portal.mode === "assisted"
+                ? "Asistido + revisión"
+                : "Solo portal original"}
+          </span>
+          <span className="text-[10px] leading-relaxed text-slate-500">{job.portal.reason}</span>
+        </div>
       </div>
 
       <div className="space-y-5 p-5">
@@ -121,12 +160,23 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
         )}
 
         <div className="space-y-2 border-t border-line/70 pt-4">
-          {job.url && (
+          {job.portal.can_assist ? (
+            <Link to={`/jobs/${job.id}/apply`} className={cn("btn-primary w-full", !match.eligible && "opacity-70")}>
+              <Wand2 className="h-4 w-4" /> Preparar postulación
+            </Link>
+          ) : (
+            job.url && (
+              <a href={job.url} target="_blank" rel="noreferrer" className="btn-primary w-full">
+                <ExternalLink className="h-4 w-4" /> Abrir portal original
+              </a>
+            )
+          )}
+          {job.url && job.portal.can_assist && (
             <a href={job.url} target="_blank" rel="noreferrer" className="btn-secondary w-full">
-              <ExternalLink className="h-4 w-4" /> Postular en el portal
+              <ExternalLink className="h-4 w-4" /> Abrir portal sin asistente
             </a>
           )}
-          <Link to={`/jobs/${job.id}/tailor`} className={cn("btn-primary w-full", !match.eligible && "opacity-70")}>
+          <Link to={`/jobs/${job.id}/tailor`} className="btn-secondary w-full">
             <Sparkles className="h-4 w-4" /> Adaptar mi CV
           </Link>
           <div className="grid grid-cols-2 gap-2">
@@ -149,7 +199,9 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
           </div>
           {job.url && (
             <p className="text-center text-[10px] leading-relaxed text-slate-600">
-              La postulación se abre en el portal original.
+              {job.portal.mode === "manual_only"
+                ? "Este portal exige que completes la postulación directamente. No hay autocompletado."
+                : "La IA prepara los datos; tú revisas y confirmas antes de enviar."}
             </p>
           )}
         </div>

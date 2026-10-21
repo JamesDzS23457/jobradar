@@ -4,7 +4,7 @@
 
 JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, las puntúa con una explicación y te ayuda a adaptar el CV a cada vacante. Está pensado para una persona ubicada en Bogotá, Colombia: prioriza presencial/híbrido en Bogotá y su área metropolitana, acepta remoto nacional y solo acepta remoto para ofertas fuera de Colombia.
 
-> Este proyecto no postula automáticamente en portales de terceros ni scrapea LinkedIn/Indeed. Prepara el CV y la carta, y tú decides dónde y cuándo aplicar.
+> JobRadar no scrapea LinkedIn/Indeed ni evade CAPTCHA, 2FA o sistemas anti-bot. En portales restringidos solo importa la vacante y te lleva al enlace original. En portales compatibles ofrece un asistente con revisión humana y, si lo activas, auto-envío opcional mediante una extensión local de Chrome.
 
 ![Dashboard de JobRadar](docs/screenshots/dashboard.webp)
 
@@ -15,7 +15,10 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Match explicable:** score de 0 a 100 con desglose por skills, rol, seniority, ubicación, idioma, salario y frescura. Cada resultado incluye razones, brechas y señales de alerta.
 - **Importar una vacante por URL:** pega el enlace público de cualquier oferta y JobRadar extrae título, empresa, ubicación, salario y descripción desde schema.org/OpenGraph, calcula el match y conserva el enlace original para postular en el portal.
 - **CV adaptado por vacante:** reescribe el resumen, prioriza skills y reordena experiencia usando solo información real del perfil. Genera DOCX y PDF después de tu aprobación.
-- **Postulación en el portal:** cada vacante tiene un botón **Postular en el portal** que abre la oferta original. JobRadar no envía tu hoja de vida ni automatiza formularios.
+- **Asistente de postulación:** prepara los campos, redacta respuestas y adjunta el CV elegido. En portales compatibles la extensión de Chrome rellena el formulario; tú revisas y confirmas el envío.
+- **Auto-envío opcional:** desactivado por defecto. Cuando lo activas, procesa en orden solo portales permitidos (Greenhouse, Lever, Ashby, Workable, Breezy y Teamtailor) y deja las demás vacantes como cartas manuales con descripción y enlace original.
+- **Portales restringidos:** LinkedIn, Indeed, Computrabajo, Magneto, elempleo y Glassdoor son solo manuales: se muestra la vacante y se abre el portal original, sin autocompletado ni envío.
+- **Frescura y descarte:** filtros de 24 h, 48 h (default), 7 días o todo; las vacantes sin fecha se excluyen por defecto. Puedes descartar una vacante para que no reaparezca en búsquedas ni rondas de auto-envío.
 - **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas.
 - **Alertas por Gmail:** correo inmediato para matches excelentes y resumen diario para los buenos.
 - **Modo demo:** funciona sin claves, sin red y sin datos reales. Ideal para probar la experiencia o mostrarla en un portafolio.
@@ -35,7 +38,8 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy, SQLite, APScheduler.
 - **Frontend:** React 19, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router, Sonner.
-- **IA:** proveedor compatible con OpenAI (opcional). Sin clave funciona con heurísticas y plantillas.
+- **IA:** OpenRouter con modelos gratuitos de NVIDIA Nemotron (opcional). Sin clave funciona con heurísticas y plantillas.
+- **Extensión:** Chrome Manifest V3, sin dependencias externas y sin funciones de evasión.
 - **Correo:** SMTP de Gmail con contraseña de aplicación (opcional).
 - **Fuentes:** JSearch, Jooble, Remotive, RemoteOK, búsqueda web opcional con Brave Search y dataset demo.
 
@@ -86,10 +90,17 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 |---|---|
 | `DEMO_MODE` | `true` carga datos de ejemplo y desactiva correos reales. |
 | `DATABASE_URL` | Por defecto SQLite en `data/jobradar.db`. |
-| `LLM_API_KEY` | Clave del proveedor de IA. Si está vacía, usa fallback heurístico. |
-| `LLM_BASE_URL` | Endpoint compatible con OpenAI. |
-| `LLM_MODEL_FAST` | Modelo para parsing y extracción. |
-| `LLM_MODEL_QUALITY` | Modelo para adaptar el CV. |
+| `LLM_API_KEY` / `OPENROUTER_API_KEY` | Clave de OpenRouter (cualquiera de las dos). Si están vacías, usa fallback heurístico y plantillas. |
+| `LLM_BASE_URL` | Por defecto `https://openrouter.ai/api/v1`. |
+| `LLM_MODEL_FAST` | Modelo rápido para parsing (default `nvidia/nemotron-3.5-lightning:free`). |
+| `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (default `nvidia/nemotron-3-super-120b-a12b:free`). |
+| `LLM_MODEL_FALLBACK` | Modelo de respaldo (default `nvidia/nemotron-3.5-super-vl:free`). |
+| `AUTO_SUBMIT_ENABLED` | Valor global de referencia para despliegues (default `false`). La activación por usuario se hace con el interruptor de Ajustes. |
+| `AUTO_SUBMIT_MAX_PER_RUN` | Máximo de vacantes por ronda (default 5). |
+| `AUTO_SUBMIT_PORTALS` | Allowlist de ATS para auto-envío. |
+| `MANUAL_ONLY_PORTALS` | Portales que nunca se asisten ni se envían automáticamente. |
+| `DEFAULT_CV_SOURCE` | `tailored` (CV adaptado ATS) u `original` (PDF original). |
+| `FRESHNESS_DAYS` | Frescura por defecto del listado (default 2 días). |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). |
 | `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). |
 | `BRAVE_SEARCH_API_KEY` | Opcional. Búsqueda web de vacantes públicas vía Brave Search (tiene plan gratuito). |
@@ -121,10 +132,40 @@ Con `ENABLE_SCHEDULER=true` y SMTP configurado:
 3. JobRadar busca ofertas y calcula el match. También puedes pegar el enlace público de una vacante con **Importar por URL**.
 4. Revisa el dashboard y el detalle de cada vacante.
 5. Adapta el CV, revísalo y descarga DOCX/PDF.
-6. Pulsa **Postular en el portal** para abrir la oferta original y aplicar allí.
-7. Marca la postulación en el tracker.
+6. Abre **Preparar postulación**, elige **CV adaptado ATS** o **PDF original** y revisa los datos.
+7. Pulsa **Abrir portal con asistente** para que la extensión rellene el formulario, o **Abrir portal original** para hacerlo manualmente.
+8. Revisa y envía. En portales permitidos puedes activar **Realizar auto-envío** desde Vacantes.
+9. Marca o confirma la postulación en el tracker.
 
 ![CV adaptado con guardrails y aprobación](docs/screenshots/tailor.webp)
+
+## Asistente de postulación y auto-envío
+
+JobRadar clasifica cada portal antes de actuar:
+
+| Modo | Portales | Comportamiento |
+|---|---|---|
+| `manual_only` | LinkedIn, Indeed, Computrabajo, Magneto, elempleo, Glassdoor | Solo importa/muestra la vacante y abre el enlace original. Sin autocompletado ni envío. |
+| `assisted` | Portales y ATS desconocidos | La extensión rellena campos y respuestas; tú revisas y confirmas el envío. |
+| `auto_submit` | Greenhouse, Lever, Ashby, Workable, Breezy, Teamtailor | Relleno y envío automático **solo si** activaste el auto-envío en Ajustes. |
+
+El auto-envío es opt-in, secuencial y limitado por ronda. La ronda prioriza portales ATS permitidos y usa los cupos restantes para mostrar cartas manuales con descripción y URL original. La extensión se detiene y marca la vacante como manual si encuentra login, CAPTCHA, 2FA, términos obligatorios o un flujo que no reconoce.
+
+### Instalar la extensión
+
+1. Arranca backend (`http://127.0.0.1:8000`) y frontend (`http://127.0.0.1:5173`).
+2. Abre `chrome://extensions` y activa **Modo de desarrollador**.
+3. Pulsa **Cargar descomprimida** y selecciona la carpeta `extension/`.
+4. Fija la extensión en la barra si quieres abrir el panel manualmente con su icono.
+
+La extensión usa tu sesión real del navegador. No guarda contraseñas de portales, no evade CAPTCHA/2FA ni intenta ocultar la automatización. Los formularios son heurísticos: iframes, flujos multi-dominio y validaciones personalizadas pueden requerir que completes el último paso a mano. Más detalles en [`extension/README.md`](extension/README.md).
+
+## Frescura y descarte
+
+- El listado muestra por defecto las últimas **48 horas**, ordenadas de más reciente a más antigua.
+- Puedes cambiar a 24 h, 7 días o todo, e incluir vacantes sin fecha si lo necesitas.
+- La importación manual por URL **no** se bloquea por frescura.
+- **Descartar** usa un borrado lógico: la vacante desaparece de búsquedas y rondas de auto-envío, y no reaparece si se vuelve a importar. Puedes restaurarla desde su detalle.
 
 ## Reglas de ubicación
 
@@ -148,6 +189,7 @@ Por eso no promete "todas las vacantes de internet": promete traer las que sean 
 
 - La base de datos, los CVs subidos y los archivos exportados viven en `data/`, fuera de Git.
 - Las claves se leen desde `backend/.env`; nunca se envían al navegador.
+- La extensión guarda solo la URL base de la API en `chrome.storage.local`; no almacena credenciales de portales ni contraseñas.
 - JobRadar es una herramienta personal y local. Si la publicas fuera de tu máquina, ponle autenticación en un reverse proxy.
 
 ## Estructura
@@ -169,6 +211,7 @@ jobradar/
 │       ├── components/
 │       ├── lib/
 │       └── pages/
+├── extension/          # Chrome MV3: relleno asistido y auto-envío opt-in
 ├── docs/screenshots/
 ├── data/               # runtime, no versionado
 └── Makefile
@@ -182,7 +225,7 @@ cd backend && uv run ruff check .
 cd frontend && npm run build
 ```
 
-El backend incluye pruebas de reglas de ubicación, motor de matching, endpoints, exportación y digest de correo. El frontend se valida con TypeScript estricto y build de producción de Vite.
+El backend incluye pruebas de reglas de ubicación, motor de matching, endpoints, exportación, digest de correo, clasificación de portales, sesiones de postulación, auto-envío, frescura y descarte. El frontend se valida con TypeScript estricto y build de producción de Vite. La extensión se valida con `node --check` y el manifiesto con `python -m json.tool`.
 
 ## Estado
 
@@ -194,6 +237,9 @@ MVP local completo:
 - [x] Importación de vacantes públicas por URL con JSON-LD/OpenGraph.
 - [x] Dashboard, vacantes, detalle y tracker.
 - [x] Adaptación de CV con guardrails, aprobación y exportación DOCX/PDF.
+- [x] Asistente de postulación con extensión Chrome, CV original/adaptado y revisión humana.
+- [x] Auto-envío opt-in para ATS permitidos; portales restringidos permanecen manuales.
+- [x] Frescura configurable, descarte/restauración y bloqueo de reaparición.
 - [x] Alertas Gmail inmediatas y resumen diario.
 - [x] Modo demo offline y datos de ejemplo.
 - [ ] Autenticación y despliegue público (fuera del alcance personal).

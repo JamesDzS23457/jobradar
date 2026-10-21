@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  Download,
   FileText,
   Loader2,
   Plus,
   Save,
   Sparkles,
   Trash2,
+  TriangleAlert,
   UploadCloud,
   UserRound,
 } from "lucide-react";
@@ -93,6 +95,7 @@ export function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadReview, setUploadReview] = useState<NonNullable<Awaited<ReturnType<typeof api.uploadCv>>["review"]> | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["profile"],
@@ -142,6 +145,7 @@ export function ProfilePage() {
     mutationFn: api.uploadCv,
     onSuccess: (result) => {
       toast.success(result.message);
+      setUploadReview(result.review ?? null);
       setForm(profileToForm(result.profile));
       queryClient.invalidateQueries();
     },
@@ -596,10 +600,71 @@ export function ProfilePage() {
                 <span className="truncate">{profile.cv_file_name}</span>
               </div>
             )}
+            {profile?.has_cv && profile.cv_original_url && (
+              <a
+                href={api.originalCvUrl()}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                className="btn-secondary mt-2 w-full text-xs"
+              >
+                <Download className="h-3.5 w-3.5" /> Ver / descargar CV original
+              </a>
+            )}
             <button type="button" className="btn-secondary mt-4 w-full text-xs">
               Seleccionar archivo
             </button>
           </div>
+
+          {uploadReview && (
+            <div className="card p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="section-title">Datos detectados</h2>
+                  <p className="mt-1 text-[11px] text-muted">Revisa y corrige antes de postular.</p>
+                </div>
+                <span className="chip">CV</span>
+              </div>
+              <div className="mt-3 space-y-2 text-[11px]">
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Nombre</span>
+                  <span className="text-right text-slate-200">{uploadReview.name || "No detectado"}</span>
+                </p>
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Email</span>
+                  <span className="truncate text-right text-slate-200">{uploadReview.email || "No detectado"}</span>
+                </p>
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Teléfono</span>
+                  <span className="text-right text-slate-200">{uploadReview.phone || "No detectado"}</span>
+                </p>
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Experiencia</span>
+                  <span className="text-right text-slate-200">{uploadReview.experience_count} registros</span>
+                </p>
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Educación</span>
+                  <span className="text-right text-slate-200">{uploadReview.education_count} registros</span>
+                </p>
+                <p className="flex justify-between gap-2">
+                  <span className="text-muted">Habilidades</span>
+                  <span className="text-right text-slate-200">{uploadReview.skills.length} detectadas</span>
+                </p>
+              </div>
+              {uploadReview.warnings.length > 0 && (
+                <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.05] p-2.5">
+                  {uploadReview.warnings.map((warning) => (
+                    <p key={warning} className="flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-100/70">
+                      <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" /> {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+                Corrige cualquier dato en el formulario y guarda el perfil. Los campos vacíos no se inventan.
+              </p>
+            </div>
+          )}
 
           <div className="card p-5">
             <div className="flex items-center justify-between">

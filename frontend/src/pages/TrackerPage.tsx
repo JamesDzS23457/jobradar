@@ -54,7 +54,7 @@ export function TrackerPage() {
       <PageHeader
         eyebrow="Seguimiento"
         title="Tu pipeline de postulaciones"
-        description="Mueve cada oportunidad a medida que avanza. JobRadar no envía nada por ti: tú controlas el proceso."
+        description="Mueve cada oportunidad a medida que avanza. Tú controlas el proceso; el auto-envío es opcional y solo para portales permitidos."
         actions={
           <Link to="/jobs" className="btn-secondary">
             <BriefcaseBusiness className="h-4 w-4" /> Buscar vacantes

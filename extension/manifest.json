@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "JobRadar Assistant",
+  "version": "0.1.0",
+  "description": "Asistente local y seguro para rellenar postulaciones desde JobRadar, usando tu sesión real del navegador.",
+  "permissions": ["storage", "tabs", "scripting", "activeTab"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*",
+    "https://greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://lever.co/*",
+    "https://*.lever.co/*",
+    "https://ashbyhq.com/*",
+    "https://*.ashbyhq.com/*",
+    "https://workable.com/*",
+    "https://*.workable.com/*",
+    "https://breezy.hr/*",
+    "https://*.breezy.hr/*",
+    "https://teamtailor.com/*",
+    "https://*.teamtailor.com/*",
+    "https://smartrecruiters.com/*",
+    "https://*.smartrecruiters.com/*",
+    "https://recruitee.com/*",
+    "https://*.recruitee.com/*",
+    "https://bamboohr.com/*",
+    "https://*.bamboohr.com/*",
+    "https://myworkdayjobs.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://workday.com/*",
+    "https://*.workday.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Abrir asistente JobRadar"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "http://localhost:8000/*",
+        "http://127.0.0.1:8000/*"
+      ],
+      "js": ["web-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://lever.co/*",
+        "https://*.lever.co/*",
+        "https://ashbyhq.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://workable.com/*",
+        "https://*.workable.com/*",
+        "https://breezy.hr/*",
+        "https://*.breezy.hr/*",
+        "https://teamtailor.com/*",
+        "https://*.teamtailor.com/*",
+        "https://smartrecruiters.com/*",
+        "https://*.smartrecruiters.com/*",
+        "https://recruitee.com/*",
+        "https://*.recruitee.com/*",
+        "https://bamboohr.com/*",
+        "https://*.bamboohr.com/*",
+        "https://myworkdayjobs.com/*",
+        "https://*.myworkdayjobs.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

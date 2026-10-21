@@ -26,10 +26,21 @@ class Settings(BaseSettings):
     upload_dir: Path = Field(default=DATA_DIR / "uploads")
     export_dir: Path = Field(default=DATA_DIR / "exports")
 
+    llm_provider: str = "openrouter"
     llm_api_key: str = ""
-    llm_base_url: str = "https://api.openai.com/v1"
-    llm_model_fast: str = "gpt-4o-mini"
-    llm_model_quality: str = "gpt-4o-mini"
+    openrouter_api_key: str = ""
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model_fast: str = "nvidia/nemotron-3.5-lightning:free"
+    llm_model_quality: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    llm_model_fallback: str = "nvidia/nemotron-3.5-super-vl:free"
+    llm_timeout_seconds: int = 90
+
+    auto_submit_enabled: bool = False
+    auto_submit_max_per_run: int = 5
+    auto_submit_portals: str = "greenhouse,lever,ashby,workable,breezy,teamtailor"
+    manual_only_portals: str = "linkedin,indeed,computrabajo,magneto,elempleo,glassdoor"
+    default_cv_source: str = "tailored"
+    freshness_days: int = 2
 
     jsearch_api_key: str = ""
     jooble_api_key: str = ""
@@ -54,7 +65,19 @@ class Settings(BaseSettings):
 
     @property
     def llm_configured(self) -> bool:
-        return bool(self.llm_api_key.strip())
+        return bool((self.llm_api_key or self.openrouter_api_key).strip())
+
+    @property
+    def resolved_llm_api_key(self) -> str:
+        return (self.llm_api_key or self.openrouter_api_key).strip()
+
+    @property
+    def auto_submit_portals_list(self) -> list[str]:
+        return [value.strip().lower() for value in self.auto_submit_portals.split(",") if value.strip()]
+
+    @property
+    def manual_only_portals_list(self) -> list[str]:
+        return [value.strip().lower() for value in self.manual_only_portals.split(",") if value.strip()]
 
     @property
     def smtp_configured(self) -> bool:

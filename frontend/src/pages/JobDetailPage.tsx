@@ -1,6 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Banknote, BriefcaseBusiness, CalendarDays, ExternalLink, MapPin, Sparkles } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Banknote,
+  BriefcaseBusiness,
+  CalendarDays,
+  ExternalLink,
+  MapPin,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+  Wand2,
+} from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { MatchPanel } from "@/components/MatchPanel";
@@ -12,6 +23,7 @@ export function JobDetailPage() {
   const { id } = useParams();
   const jobId = Number(id);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["job", jobId],
@@ -26,6 +38,28 @@ export function JobDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["job", jobId] });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (mutationError: Error) => toast.error(mutationError.message),
+  });
+
+  const discardMutation = useMutation({
+    mutationFn: () => api.discardJob(jobId),
+    onSuccess: () => {
+      toast.success("Vacante descartada. No volverá a aparecer en búsquedas ni en el auto-envío.");
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      navigate("/jobs");
+    },
+    onError: (mutationError: Error) => toast.error(mutationError.message),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: () => api.restoreJob(jobId),
+    onSuccess: () => {
+      toast.success("Vacante restaurada.");
+      queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (mutationError: Error) => toast.error(mutationError.message),
@@ -107,6 +141,22 @@ export function JobDetailPage() {
                 <span className="chip">
                   <CalendarDays className="h-3 w-3" /> {formatDate(job.posted_at)}
                 </span>
+                <span
+                  className={
+                    job.portal.mode === "auto_submit"
+                      ? "chip border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                      : job.portal.mode === "assisted"
+                        ? "chip border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+                        : "chip border-amber-400/20 bg-amber-400/10 text-amber-300"
+                  }
+                >
+                  {job.portal.label} ·{" "}
+                  {job.portal.mode === "manual_only"
+                    ? "manual"
+                    : job.portal.mode === "auto_submit"
+                      ? "auto-envío"
+                      : "asistido"}
+                </span>
               </div>
             </div>
           </div>
@@ -179,17 +229,49 @@ export function JobDetailPage() {
           </section>
 
           <div className="flex flex-wrap gap-2">
-            <Link to={`/jobs/${job.id}/tailor`} className="btn-primary">
+            {job.portal.can_assist && (
+              <Link to={`/jobs/${job.id}/apply`} className="btn-primary">
+                <Wand2 className="h-4 w-4" /> Preparar postulación
+              </Link>
+            )}
+            <Link to={`/jobs/${job.id}/tailor`} className="btn-secondary">
               <Sparkles className="h-4 w-4" /> Adaptar CV a esta vacante
             </Link>
             {job.url && (
               <a href={job.url} target="_blank" rel="noreferrer" className="btn-secondary">
-                <ExternalLink className="h-4 w-4" /> Postular en el portal
+                <ExternalLink className="h-4 w-4" /> Abrir portal original
               </a>
+            )}
+            {job.status === "discarded" ? (
+              <button
+                type="button"
+                onClick={() => restoreMutation.mutate()}
+                disabled={restoreMutation.isPending}
+                className="btn-secondary"
+              >
+                <RotateCcw className="h-4 w-4" /> Restaurar
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("¿Descartar esta vacante? No volverá a aparecer en búsquedas ni en auto-envío.")) {
+                    discardMutation.mutate();
+                  }
+                }}
+                disabled={discardMutation.isPending}
+                className="btn-ghost text-rose-300 hover:bg-rose-500/10"
+              >
+                <Trash2 className="h-4 w-4" /> Descartar
+              </button>
             )}
           </div>
           <p className="text-[11px] text-slate-600">
-            La postulación se completa en el portal original. JobRadar no envía tu hoja de vida por ti.
+            {job.portal.mode === "manual_only"
+              ? "Este portal es solo manual: JobRadar te muestra la vacante y te lleva al enlace original."
+              : job.portal.mode === "auto_submit"
+                ? "El asistente puede rellenar y enviar si lo autorizas; siempre queda registro en el tracker."
+                : "El asistente puede rellenar el formulario, pero tú revisas y confirmas el envío."}
           </p>
         </div>
 

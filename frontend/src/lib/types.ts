@@ -40,7 +40,20 @@ export type Profile = {
   years_experience: number;
   has_cv: boolean;
   cv_file_name: string;
+  cv_original_url: string;
   updated_at: string;
+};
+
+export type PortalMode = "manual_only" | "assisted" | "auto_submit";
+
+export type PortalInfo = {
+  source: string;
+  label: string;
+  domain: string;
+  mode: PortalMode;
+  can_assist: boolean;
+  can_auto_submit: boolean;
+  reason: string;
 };
 
 export type Preferences = {
@@ -65,6 +78,10 @@ export type Preferences = {
   search_interval_hours: number;
   blacklist_companies: string[];
   blacklist_keywords: string[];
+  freshness_days: number;
+  auto_submit_enabled: boolean;
+  auto_submit_max_per_run: number;
+  default_cv_source: "tailored" | "original";
   updated_at: string;
 };
 
@@ -84,7 +101,8 @@ export type Job = {
   currency: string;
   url: string;
   posted_at: string | null;
-  status: "new" | "saved" | "dismissed" | "applied";
+  status: "new" | "saved" | "dismissed" | "applied" | "discarded";
+  imported_manually: boolean;
   skills_required: string[];
   skills_nice: string[];
   seniority: string;
@@ -92,6 +110,7 @@ export type Job = {
   languages: Record<string, string>;
   red_flags: string[];
   match: Match | null;
+  portal: PortalInfo;
 };
 
 export type SearchRun = {
@@ -132,6 +151,10 @@ export type Application = {
   applied_at: string | null;
   notes: string;
   next_action_at: string | null;
+  cv_source: "tailored" | "original";
+  cv_file_name: string;
+  portal_mode: PortalMode;
+  application_url: string;
   created_at: string;
   updated_at: string;
   job: Job | null;
@@ -161,11 +184,93 @@ export type TailoredCV = {
   pdf_url: string;
 };
 
+export type CvOption = {
+  available: boolean;
+  file_name: string;
+  approved?: boolean;
+  download_url: string;
+};
+
+export type ApplicationPreview = {
+  job: Job;
+  portal: PortalInfo;
+  cv_source: "tailored" | "original";
+  cv_options: {
+    tailored: CvOption;
+    original: CvOption;
+  };
+  fields: Record<string, string>;
+  cover_letter: string;
+  warnings: string[];
+  can_assist: boolean;
+  can_auto_submit: boolean;
+};
+
+export type ApplicationSession = {
+  id: number;
+  job_id: number;
+  run_id: number | null;
+  status: string;
+  portal_mode: PortalMode;
+  portal: PortalInfo | null;
+  cv_source: "tailored" | "original";
+  cv_file_name: string;
+  cv_url: string;
+  fields: Record<string, string>;
+  answers: Record<string, unknown>;
+  message: string;
+  created_at: string;
+  updated_at: string;
+  job: Job | null;
+};
+
+export type ApplicationAnswer = {
+  question: string;
+  answer: string;
+  confidence: "high" | "medium" | "low";
+  needs_user_input: boolean;
+  source: string;
+};
+
+export type ApplicationRunItem = {
+  id: number;
+  run_id: number;
+  job_id: number;
+  session_id: number | null;
+  status: "queued" | "processing" | "submitted" | "manual" | "failed" | "skipped";
+  message: string;
+  updated_at: string;
+  job: Job | null;
+};
+
+export type ApplicationRun = {
+  id: number;
+  status: "running" | "completed";
+  max_items: number;
+  total: number;
+  submitted: number;
+  manual: number;
+  failed: number;
+  created_at: string;
+  finished_at: string | null;
+  items: ApplicationRunItem[];
+};
+
 export type ConfigStatus = {
   app_name: string;
   demo_mode: boolean;
   llm_configured: boolean;
+  llm_provider: string;
+  llm_base_url: string;
   llm_model: string | null;
+  llm_model_fast: string;
+  llm_model_quality: string;
+  llm_model_fallback: string;
+  auto_submit_enabled: boolean;
+  auto_submit_max_per_run: number;
+  auto_submit_portals: string[];
+  manual_only_portals: string[];
+  default_cv_source: "tailored" | "original";
   smtp_configured: boolean;
   jsearch_configured: boolean;
   jooble_configured: boolean;

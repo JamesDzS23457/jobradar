@@ -84,6 +84,10 @@ class Preferences(Base):
     search_interval_hours: Mapped[int] = mapped_column(Integer, default=6)
     blacklist_companies: Mapped[list[str]] = mapped_column(JSON, default=list)
     blacklist_keywords: Mapped[list[str]] = mapped_column(JSON, default=list)
+    freshness_days: Mapped[int] = mapped_column(Integer, default=2)
+    auto_submit_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_submit_max_per_run: Mapped[int] = mapped_column(Integer, default=5)
+    default_cv_source: Mapped[str] = mapped_column(String(20), default="tailored")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def as_dict(self) -> dict[str, Any]:
@@ -109,6 +113,10 @@ class Preferences(Base):
             "search_interval_hours": self.search_interval_hours,
             "blacklist_companies": self.blacklist_companies or [],
             "blacklist_keywords": self.blacklist_keywords or [],
+            "freshness_days": self.freshness_days or 2,
+            "auto_submit_enabled": bool(self.auto_submit_enabled),
+            "auto_submit_max_per_run": self.auto_submit_max_per_run or 5,
+            "default_cv_source": self.default_cv_source or "tailored",
             "updated_at": self.updated_at,
         }
 
@@ -138,6 +146,7 @@ class Job(Base):
     hash: Mapped[str] = mapped_column(String(64), default="")
     raw_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(30), default="new")
+    imported_manually: Mapped[bool] = mapped_column(Boolean, default=False)
     skills_required: Mapped[list[str]] = mapped_column(JSON, default=list)
     skills_nice: Mapped[list[str]] = mapped_column(JSON, default=list)
     seniority: Mapped[str] = mapped_column(String(30), default="mid")
@@ -182,10 +191,67 @@ class Application(Base):
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str] = mapped_column(Text, default="")
     next_action_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cv_source: Mapped[str] = mapped_column(String(20), default="tailored")
+    cv_file_name: Mapped[str] = mapped_column(String(300), default="")
+    portal_mode: Mapped[str] = mapped_column(String(30), default="manual_only")
+    application_url: Mapped[str] = mapped_column(String(700), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     job: Mapped[Job] = relationship(back_populates="application")
+
+
+class ApplicationRun(Base):
+    __tablename__ = "application_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(String(30), default="running")
+    max_items: Mapped[int] = mapped_column(Integer, default=5)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    submitted: Mapped[int] = mapped_column(Integer, default=0)
+    manual: Mapped[int] = mapped_column(Integer, default=0)
+    failed: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ApplicationRunItem(Base):
+    __tablename__ = "application_run_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("application_runs.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("application_sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(30), default="queued")
+    message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    job: Mapped[Job] = relationship()
+
+
+class ApplicationSession(Base):
+    __tablename__ = "application_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id", ondelete="CASCADE"), index=True)
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("application_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(30), default="awaiting_review")
+    portal_mode: Mapped[str] = mapped_column(String(30), default="assisted")
+    cv_source: Mapped[str] = mapped_column(String(20), default="tailored")
+    cv_file_name: Mapped[str] = mapped_column(String(300), default="")
+    cv_path: Mapped[str] = mapped_column(String(700), default="")
+    fields: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    answers: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    job: Mapped[Job] = relationship()
 
 
 class TailoredCV(Base):

@@ -174,10 +174,21 @@ def seed_demo(db: Session) -> dict[str, Any]:
 
 
 def reset_demo(db: Session) -> dict[str, Any]:
-    from app.models import AlertLog, Feedback, SearchRun, TailoredCV
+    from app.models import (
+        AlertLog,
+        ApplicationRun,
+        ApplicationRunItem,
+        ApplicationSession,
+        Feedback,
+        SearchRun,
+        TailoredCV,
+    )
 
     db.query(AlertLog).delete()
     db.query(Feedback).delete()
+    db.query(ApplicationRunItem).delete()
+    db.query(ApplicationSession).delete()
+    db.query(ApplicationRun).delete()
     db.query(TailoredCV).delete()
     db.query(Application).delete()
     db.query(Match).delete()

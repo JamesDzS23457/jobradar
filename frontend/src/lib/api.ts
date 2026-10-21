@@ -1,5 +1,9 @@
 import type {
   Application,
+  ApplicationAnswer,
+  ApplicationPreview,
+  ApplicationRun,
+  ApplicationSession,
   ConfigStatus,
   Dashboard,
   Job,
@@ -50,7 +54,10 @@ export const api = {
     remote_type?: string;
     min_score?: number;
     saved?: boolean;
+    discarded?: boolean;
     include_ineligible?: boolean;
+    max_age_days?: number;
+    include_unknown_date?: boolean;
     limit?: number;
   } = {}) => request<{ items: Job[]; total: number }>(`/api/jobs${queryString(params)}`),
   job: (id: number) => request<{ job: Job }>(`/api/jobs/${id}`),
@@ -61,6 +68,8 @@ export const api = {
     }),
   updateJob: (id: number, status: Job["status"]) =>
     request<{ job: Job }>(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  discardJob: (id: number) => request<{ discarded: boolean; job: Job }>(`/api/jobs/${id}`, { method: "DELETE" }),
+  restoreJob: (id: number) => request<{ restored: boolean; job: Job }>(`/api/jobs/${id}/restore`, { method: "POST" }),
   search: () => request<{ run: SearchRun }>("/api/search/run", { method: "POST" }),
   searchStatus: () => request<{ run: SearchRun | null }>("/api/search/status"),
 
@@ -70,11 +79,29 @@ export const api = {
   uploadCv: (file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return request<{ profile: Profile; parsed_with: string; message: string }>("/api/cv/upload", {
+    return request<{
+      profile: Profile;
+      parsed_with: string;
+      message: string;
+      review?: {
+        name: string;
+        email: string;
+        phone: string;
+        location: string;
+        headline: string;
+        skills: string[];
+        experience_count: number;
+        education_count: number;
+        languages: Record<string, string>;
+        links: Record<string, string>;
+        warnings: string[];
+      };
+    }>("/api/cv/upload", {
       method: "POST",
       body: form,
     });
   },
+  originalCvUrl: () => `${API_BASE}/api/cv/original`,
 
   preferences: () => request<{ preferences: Preferences }>("/api/preferences"),
   updatePreferences: (data: Partial<Preferences>) =>
@@ -91,8 +118,37 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  applicationPreview: (jobId: number, cvSource?: "tailored" | "original") =>
+    request<{ preview: ApplicationPreview }>(
+      `/api/jobs/${jobId}/application${queryString({ cv_source: cvSource })}`,
+    ),
+  prepareApplicationSession: (jobId: number, cvSource?: "tailored" | "original") =>
+    request<{ session: ApplicationSession }>(`/api/jobs/${jobId}/application-session`, {
+      method: "POST",
+      body: JSON.stringify({ cv_source: cvSource }),
+    }),
+  applicationSession: (sessionId: number) =>
+    request<{ session: ApplicationSession }>(`/api/application-sessions/${sessionId}`),
+  sessionCvUrl: (sessionId: number) => `${API_BASE}/api/application-sessions/${sessionId}/cv`,
+  draftAnswers: (jobId: number, questions: string[]) =>
+    request<{ answers: ApplicationAnswer[] }>("/api/applications/draft-answers", {
+      method: "POST",
+      body: JSON.stringify({ job_id: jobId, questions }),
+    }),
+  autoRun: (maxItems?: number) =>
+    request<{ run: ApplicationRun }>("/api/applications/auto-run", {
+      method: "POST",
+      body: JSON.stringify({ max_items: maxItems }),
+    }),
+  applicationRun: (runId: number) => request<{ run: ApplicationRun }>(`/api/application-runs/${runId}`),
+
   applications: () => request<{ items: Application[] }>("/api/applications"),
-  createApplication: (data: { job_id: number; status: Application["status"]; notes?: string }) =>
+  createApplication: (data: {
+    job_id: number;
+    status: Application["status"];
+    notes?: string;
+    cv_source?: "tailored" | "original";
+  }) =>
     request<{ application: Application }>("/api/applications", {
       method: "POST",
       body: JSON.stringify(data),
@@ -104,6 +160,11 @@ export const api = {
     }),
 
   config: () => request<ConfigStatus>("/api/config/status"),
+  testLlm: () =>
+    request<{ ok: boolean; message: string; provider: string; model?: string; elapsed_ms?: number }>(
+      "/api/llm/test",
+      { method: "POST" },
+    ),
   testEmail: () => request<{ sent: boolean; message: string }>("/api/alerts/test-email", { method: "POST" }),
   demoSeed: () => request<{ seeded: Record<string, unknown> }>("/api/demo/seed", { method: "POST" }),
   demoReset: () => request<{ reset: Record<string, unknown> }>("/api/demo/reset", { method: "POST" }),

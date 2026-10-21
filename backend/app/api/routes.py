@@ -1,5 +1,6 @@
+import mimetypes
 import shutil
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,15 +11,41 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.models import Application, Job, Match, Preferences, Profile, SearchRun, TailoredCV
+from app.models import (
+    Application,
+    ApplicationRun,
+    ApplicationRunItem,
+    ApplicationSession,
+    Job,
+    Match,
+    Preferences,
+    Profile,
+    SearchRun,
+    TailoredCV,
+)
 from app.schemas import (
     ApplicationCreate,
+    ApplicationSessionCreate,
     ApplicationUpdate,
+    AutoRunRequest,
+    DraftAnswersRequest,
     JobStatusUpdate,
     JobUrlImport,
     PreferencesUpdate,
     ProfileUpdate,
+    SessionStatusUpdate,
     TailoredUpdate,
+)
+from app.services.applications import (
+    build_preview,
+    create_session,
+    draft_answers,
+    get_run,
+    original_cv_path,
+    run_to_dict,
+    session_to_dict,
+    start_auto_run,
+    update_session_status,
 )
 from app.services.cv_parser import extract_text, find_skills, parse_profile_heuristic
 from app.services.emailer import send_test_email
@@ -31,6 +58,7 @@ from app.services.matching import (
     recompute_all,
     upsert_match,
 )
+from app.services.portals import classify_portal
 from app.services.search import latest_search_run, normalize_job_data, run_search, upsert_job
 from app.services.seed import reset_demo, seed_demo
 from app.services.tailoring import export_docx, export_pdf, generate_tailored, tailored_to_dict
@@ -59,6 +87,7 @@ def _profile_dict(profile: Profile | None) -> dict | None:
     data = profile.as_dict()
     data["has_cv"] = bool(profile.cv_file_path)
     data["cv_file_name"] = Path(profile.cv_file_path).name if profile.cv_file_path else ""
+    data["cv_original_url"] = "/api/cv/original" if original_cv_path(profile) else ""
     return data
 
 
@@ -86,6 +115,8 @@ def _job_dict(job: Job, include_description: bool = False) -> dict:
         "languages": job.languages or {},
         "red_flags": job.red_flags or [],
         "match": match_to_dict(job.match),
+        "portal": classify_portal(job.url, settings).as_dict(),
+        "imported_manually": bool(job.imported_manually),
     }
     if include_description:
         data["description"] = job.description
@@ -100,6 +131,10 @@ def _application_dict(application: Application) -> dict:
         "applied_at": application.applied_at,
         "notes": application.notes,
         "next_action_at": application.next_action_at,
+        "cv_source": application.cv_source,
+        "cv_file_name": application.cv_file_name,
+        "portal_mode": application.portal_mode,
+        "application_url": application.application_url,
         "created_at": application.created_at,
         "updated_at": application.updated_at,
         "job": _job_dict(application.job) if application.job else None,
@@ -131,7 +166,17 @@ def config_status() -> dict:
         "app_name": settings.app_name,
         "demo_mode": settings.demo_mode,
         "llm_configured": settings.llm_configured,
+        "llm_provider": settings.llm_provider,
+        "llm_base_url": settings.llm_base_url,
         "llm_model": settings.llm_model_quality if settings.llm_configured else None,
+        "llm_model_fast": settings.llm_model_fast,
+        "llm_model_quality": settings.llm_model_quality,
+        "llm_model_fallback": settings.llm_model_fallback,
+        "auto_submit_enabled": settings.auto_submit_enabled,
+        "auto_submit_max_per_run": settings.auto_submit_max_per_run,
+        "auto_submit_portals": settings.auto_submit_portals_list,
+        "manual_only_portals": settings.manual_only_portals_list,
+        "default_cv_source": settings.default_cv_source,
         "smtp_configured": settings.smtp_configured,
         "jsearch_configured": settings.jsearch_configured,
         "jooble_configured": settings.jooble_configured,
@@ -140,6 +185,26 @@ def config_status() -> dict:
         "alert_threshold": settings.alert_threshold,
         "database": "sqlite" if settings.database_url.startswith("sqlite") else "external",
     }
+
+
+@router.post("/llm/test")
+def test_llm() -> dict:
+    return llm_service.test_connection()
+
+
+@router.get("/portals/classify")
+def classify_portal_url(url: str = Query(min_length=3, max_length=2000)) -> dict:
+    return {"portal": classify_portal(url, settings).as_dict()}
+
+
+@router.get("/cv/original")
+def download_original_cv(db: Session = Depends(get_db)) -> FileResponse:
+    profile = _profile(db)
+    path = original_cv_path(profile)
+    if path is None:
+        raise HTTPException(status_code=404, detail="No hay un CV original disponible.")
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 @router.get("/profile")
@@ -253,7 +318,24 @@ async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db))
         "profile": _profile_dict(profile),
         "parsed_with": parsed_with,
         "skills_found": profile.skills,
-        "message": "CV procesado correctamente.",
+        "review": {
+            "name": profile.name,
+            "email": profile.email,
+            "phone": profile.phone,
+            "location": profile.location,
+            "headline": profile.headline,
+            "skills": profile.skills,
+            "experience_count": len(profile.experience or []),
+            "education_count": len(profile.education or []),
+            "languages": profile.languages or {},
+            "links": profile.links or {},
+            "warnings": parsed.get("warnings", []) if isinstance(parsed, dict) else [],
+        },
+        "message": (
+            "CV procesado correctamente. Revisa los datos detectados antes de postular."
+            if parsed_with == "llm"
+            else "CV procesado con el lector local. Revisa los datos detectados y corrige lo que falte."
+        ),
     }
 
 
@@ -287,6 +369,7 @@ def import_job(payload: JobUrlImport, db: Session = Depends(get_db)) -> dict:
     if not normalized["title"]:
         raise HTTPException(status_code=400, detail="No se encontró el título de la vacante.")
     job, created = upsert_job(db, normalized, refresh=True)
+    job.imported_manually = True
     result = compute_match(profile, _prefs(db), job)
     upsert_match(db, job, result)
     db.commit()
@@ -304,12 +387,16 @@ def list_jobs(
     remote_type: str | None = Query(default=None),
     min_score: float | None = Query(default=None, ge=0, le=100),
     saved: bool = Query(default=False),
+    discarded: bool = Query(default=False),
     include_ineligible: bool = Query(default=False),
+    max_age_days: int | None = Query(default=None, ge=1, le=365),
+    include_unknown_date: bool = Query(default=False),
     limit: int = Query(default=60, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
     stmt = select(Job).options(selectinload(Job.match)).order_by(Job.posted_at.desc())
+    stmt = stmt.where(Job.status == "discarded") if discarded else stmt.where(Job.status != "discarded")
     if q:
         pattern = f"%{q.strip()}%"
         stmt = stmt.where(Job.title.ilike(pattern) | Job.company.ilike(pattern) | Job.description.ilike(pattern))
@@ -317,6 +404,12 @@ def list_jobs(
         stmt = stmt.where(Job.remote_type == remote_type)
     if saved:
         stmt = stmt.where(Job.status == "saved")
+    if max_age_days is not None:
+        cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
+        freshness = (Job.posted_at >= cutoff) | Job.imported_manually.is_(True)
+        if include_unknown_date:
+            freshness = freshness | Job.posted_at.is_(None)
+        stmt = stmt.where(freshness)
     jobs = list(db.scalars(stmt).all())
     items = []
     for job in jobs:
@@ -326,10 +419,11 @@ def list_jobs(
         if min_score is not None and (match is None or match.score < min_score):
             continue
         items.append(_job_dict(job))
+
     def sort_key(item: dict) -> tuple[float, float]:
         posted_at = item.get("posted_at")
         timestamp = posted_at.timestamp() if posted_at is not None else 0.0
-        return (item["match"]["score"] if item["match"] else 0.0, timestamp)
+        return (timestamp, item["match"]["score"] if item["match"] else 0.0)
 
     items.sort(key=sort_key, reverse=True)
     total = len(items)
@@ -370,6 +464,34 @@ def update_job(job_id: int, payload: JobStatusUpdate, db: Session = Depends(get_
     db.commit()
     db.refresh(job)
     return {"job": _job_dict(job)}
+
+
+@router.delete("/jobs/{job_id}")
+def discard_job(job_id: int, db: Session = Depends(get_db)) -> dict:
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Vacante no encontrada")
+    job.status = "discarded"
+    db.commit()
+    db.refresh(job)
+    return {"discarded": True, "job": _job_dict(job)}
+
+
+@router.post("/jobs/{job_id}/restore")
+def restore_job(job_id: int, db: Session = Depends(get_db)) -> dict:
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Vacante no encontrada")
+    application = db.scalar(select(Application).where(Application.job_id == job_id))
+    if application is not None and application.status in {"applied", "interview", "offer"}:
+        job.status = "applied"
+    elif application is not None and application.status == "saved":
+        job.status = "saved"
+    else:
+        job.status = "new"
+    db.commit()
+    db.refresh(job)
+    return {"restored": True, "job": _job_dict(job)}
 
 
 @router.post("/jobs/{job_id}/match")
@@ -441,6 +563,147 @@ def download_tailored(tailored_id: int, format: str = Query(default="docx", patt
     return FileResponse(path, media_type=media_type, filename=path.name)
 
 
+@router.get("/jobs/{job_id}/application")
+def application_preview(
+    job_id: int,
+    cv_source: str | None = Query(default=None, pattern="^(tailored|original)$"),
+    db: Session = Depends(get_db),
+) -> dict:
+    job = db.scalar(select(Job).options(selectinload(Job.match)).where(Job.id == job_id))
+    profile = _profile(db)
+    if job is None or profile is None:
+        raise HTTPException(status_code=404, detail="Vacante o perfil no encontrado")
+    return {"preview": build_preview(db, job, profile, _prefs(db), settings, cv_source)}
+
+
+@router.post("/jobs/{job_id}/application-session")
+def prepare_application_session(
+    job_id: int,
+    payload: ApplicationSessionCreate | None = None,
+    db: Session = Depends(get_db),
+) -> dict:
+    job = db.scalar(select(Job).options(selectinload(Job.match)).where(Job.id == job_id))
+    profile = _profile(db)
+    if job is None or profile is None:
+        raise HTTPException(status_code=404, detail="Vacante o perfil no encontrado")
+    try:
+        session = create_session(
+            db,
+            job,
+            profile,
+            _prefs(db),
+            settings,
+            cv_source=payload.cv_source if payload else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    session = db.scalar(
+        select(ApplicationSession)
+        .options(selectinload(ApplicationSession.job).selectinload(Job.match))
+        .where(ApplicationSession.id == session.id)
+    )
+    return {"session": session_to_dict(session) if session else None}
+
+
+@router.get("/application-sessions/{session_id}")
+def get_application_session(session_id: int, db: Session = Depends(get_db)) -> dict:
+    session = db.scalar(
+        select(ApplicationSession)
+        .options(selectinload(ApplicationSession.job).selectinload(Job.match))
+        .where(ApplicationSession.id == session_id)
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Sesión de postulación no encontrada")
+    return {"session": session_to_dict(session)}
+
+
+@router.get("/application-sessions/{session_id}/cv")
+def download_session_cv(session_id: int, db: Session = Depends(get_db)) -> FileResponse:
+    session = db.get(ApplicationSession, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Sesión de postulación no encontrada")
+    path = Path(session.cv_path)
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="El CV de esta postulación ya no está disponible.")
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return FileResponse(path, media_type=media_type, filename=session.cv_file_name or path.name)
+
+
+@router.post("/applications/draft-answers")
+def draft_application_answers(payload: DraftAnswersRequest, db: Session = Depends(get_db)) -> dict:
+    job = db.scalar(select(Job).options(selectinload(Job.match)).where(Job.id == payload.job_id))
+    profile = _profile(db)
+    if job is None or profile is None:
+        raise HTTPException(status_code=404, detail="Vacante o perfil no encontrado")
+    return {"answers": draft_answers(job, profile, payload.questions)}
+
+
+@router.post("/applications/auto-run")
+def auto_run(payload: AutoRunRequest | None = None, db: Session = Depends(get_db)) -> dict:
+    profile = _profile(db)
+    prefs = _prefs(db)
+    if profile is None:
+        raise HTTPException(status_code=400, detail="Primero sube tu CV o carga el modo demo.")
+    if not prefs.auto_submit_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Activa el auto-envío en Ajustes antes de iniciar una ronda.",
+        )
+    run = start_auto_run(
+        db,
+        profile,
+        prefs,
+        settings,
+        max_items=payload.max_items if payload else None,
+    )
+    loaded = get_run(db, run.id)
+    if loaded is None:
+        raise HTTPException(status_code=500, detail="No se pudo cargar la ronda.")
+    run, items = loaded
+    return {"run": run_to_dict(run, items)}
+
+
+@router.get("/application-runs/{run_id}")
+def application_run(run_id: int, db: Session = Depends(get_db)) -> dict:
+    loaded = get_run(db, run_id)
+    if loaded is None:
+        raise HTTPException(status_code=404, detail="Ronda de postulaciones no encontrada")
+    run, items = loaded
+    return {"run": run_to_dict(run, items)}
+
+
+@router.get("/extension/next")
+def extension_next(db: Session = Depends(get_db)) -> dict:
+    from app.services.applications import claim_next_session
+
+    session = claim_next_session(db)
+    if session is None:
+        return {"session": None}
+    session = db.scalar(
+        select(ApplicationSession)
+        .options(selectinload(ApplicationSession.job).selectinload(Job.match))
+        .where(ApplicationSession.id == session.id)
+    )
+    return {"session": session_to_dict(session) if session else None}
+
+
+@router.post("/extension/sessions/{session_id}/status")
+def extension_session_status(
+    session_id: int,
+    payload: SessionStatusUpdate,
+    db: Session = Depends(get_db),
+) -> dict:
+    session = db.scalar(
+        select(ApplicationSession)
+        .options(selectinload(ApplicationSession.job).selectinload(Job.match))
+        .where(ApplicationSession.id == session_id)
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Sesión de postulación no encontrada")
+    session = update_session_status(db, session, payload.status, payload.message)
+    return {"session": session_to_dict(session)}
+
+
 @router.get("/applications")
 def list_applications(db: Session = Depends(get_db)) -> dict:
     applications = list(
@@ -465,6 +728,10 @@ def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)
     application.status = payload.status
     application.notes = payload.notes
     application.next_action_at = payload.next_action_at
+    if payload.cv_source:
+        application.cv_source = payload.cv_source
+        application.portal_mode = classify_portal(job.url, settings).mode
+        application.application_url = job.url
     if payload.status in {"applied", "interview", "offer"} and application.applied_at is None:
         application.applied_at = datetime.now(UTC)
     job.status = "applied" if payload.status in {"applied", "interview", "offer"} else "saved"
@@ -496,7 +763,11 @@ def update_application(application_id: int, payload: ApplicationUpdate, db: Sess
 def dashboard(db: Session = Depends(get_db)) -> dict:
     profile = _profile(db)
     prefs = _prefs(db)
-    jobs = list(db.scalars(select(Job).options(selectinload(Job.match))).all())
+    jobs = [
+        job
+        for job in db.scalars(select(Job).options(selectinload(Job.match))).all()
+        if job.status != "discarded"
+    ]
     eligible_jobs = [job for job in jobs if job.match and job.match.eligible]
     applications = list(
         db.scalars(
@@ -561,6 +832,9 @@ def delete_data(db: Session = Depends(get_db)) -> dict:
 
     db.query(AlertLog).delete()
     db.query(Feedback).delete()
+    db.query(ApplicationRunItem).delete()
+    db.query(ApplicationSession).delete()
+    db.query(ApplicationRun).delete()
     db.query(TailoredCV).delete()
     db.query(Application).delete()
     db.query(Match).delete()

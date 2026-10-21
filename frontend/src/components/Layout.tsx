@@ -166,7 +166,7 @@ export function Layout() {
         </main>
 
         <footer className="mx-auto max-w-7xl px-4 pb-8 text-[11px] text-slate-600 sm:px-6 lg:px-8">
-          JobRadar · Copiloto personal de búsqueda laboral · No postula automáticamente por ti.
+          JobRadar · Copiloto personal de búsqueda laboral · Postulación manual, asistida o auto-envío opcional según el portal.
         </footer>
       </div>
     </div>

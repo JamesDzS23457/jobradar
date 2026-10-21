@@ -1,6 +1,9 @@
 from app.models.entities import (
     AlertLog,
     Application,
+    ApplicationRun,
+    ApplicationRunItem,
+    ApplicationSession,
     Feedback,
     Job,
     Match,
@@ -13,6 +16,9 @@ from app.models.entities import (
 __all__ = [
     "AlertLog",
     "Application",
+    "ApplicationRun",
+    "ApplicationRunItem",
+    "ApplicationSession",
     "Feedback",
     "Job",
     "Match",

@@ -40,10 +40,14 @@ class PreferencesUpdate(BaseModel):
     search_interval_hours: int | None = Field(default=None, ge=1, le=168)
     blacklist_companies: list[str] | None = None
     blacklist_keywords: list[str] | None = None
+    freshness_days: int | None = Field(default=None, ge=1, le=365)
+    auto_submit_enabled: bool | None = None
+    auto_submit_max_per_run: int | None = Field(default=None, ge=1, le=20)
+    default_cv_source: Literal["tailored", "original"] | None = None
 
 
 class JobStatusUpdate(BaseModel):
-    status: Literal["new", "saved", "dismissed", "applied"]
+    status: Literal["new", "saved", "dismissed", "applied", "discarded"]
 
 
 class JobUrlImport(BaseModel):
@@ -55,6 +59,7 @@ class ApplicationCreate(BaseModel):
     status: Literal["applied", "interview", "offer", "rejected", "saved"] = "applied"
     notes: str = ""
     next_action_at: datetime | None = None
+    cv_source: Literal["tailored", "original"] | None = None
 
 
 class ApplicationUpdate(BaseModel):
@@ -66,6 +71,24 @@ class ApplicationUpdate(BaseModel):
 class TailoredUpdate(BaseModel):
     content: dict[str, Any] | None = None
     approved: bool | None = None
+
+
+class ApplicationSessionCreate(BaseModel):
+    cv_source: Literal["tailored", "original"] | None = None
+
+
+class DraftAnswersRequest(BaseModel):
+    job_id: int
+    questions: list[str] = Field(default_factory=list, max_length=30)
+
+
+class SessionStatusUpdate(BaseModel):
+    status: Literal["submitted", "manual", "failed", "awaiting_review", "queued"]
+    message: str = ""
+
+
+class AutoRunRequest(BaseModel):
+    max_items: int | None = Field(default=None, ge=1, le=20)
 
 
 class MatchOut(BaseModel):
