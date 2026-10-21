@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { JobCard } from "@/components/JobCard";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchButton } from "@/components/SearchButton";
+import { Toggle } from "@/components/Toggle";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,19 @@ export function JobsPage() {
     onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
+  const autoSubmitPreferenceMutation = useMutation({
+    mutationFn: (enabled: boolean) => api.updatePreferences({ auto_submit_enabled: enabled }),
+    onSuccess: (result, enabled) => {
+      queryClient.setQueryData(["preferences"], result);
+      toast.success(
+        enabled
+          ? "Auto-envío activado. Solo se aplicará a los ATS permitidos."
+          : "Auto-envío desactivado.",
+      );
+    },
+    onError: (mutationError: Error) => toast.error(mutationError.message),
+  });
+
   const filters = useMemo(
     () => ({
       q: q.trim() || undefined,
@@ -121,6 +135,15 @@ export function JobsPage() {
         description="Filtra por modalidad, score y texto. Las ofertas presenciales fuera de Colombia no entran al radar."
         actions={
           <>
+            <div className="flex items-center gap-2 rounded-xl border border-line bg-ink/60 px-3 py-2">
+              <span className="text-[11px] font-medium text-muted">Auto-envío</span>
+              <Toggle
+                checked={autoSubmitEnabled}
+                onChange={(checked) => autoSubmitPreferenceMutation.mutate(checked)}
+                disabled={autoSubmitPreferenceMutation.isPending}
+                label="Activar o desactivar auto-envío"
+              />
+            </div>
             {autoSubmitEnabled && !showDiscarded && (
               <button
                 type="button"

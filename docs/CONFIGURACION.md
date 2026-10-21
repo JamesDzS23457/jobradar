@@ -121,8 +121,8 @@ Para que el auto-envío funcione de verdad:
 
 1. Instala la extensión de Chrome desde `extension/`.
 2. Deja el backend en `http://127.0.0.1:8000`.
-3. Activa **Realizar auto-envío** en Ajustes.
-4. Abre **Vacantes** y pulsa **Realizar auto-envío**.
+3. Activa el interruptor **Auto-envío** en **Vacantes** o en **Ajustes**.
+4. Pulsa **Realizar auto-envío** en Vacantes.
 
 Las vacantes que no se puedan automatizar aparecerán como cartas manuales con descripción y enlace original. La extensión se detiene ante login, CAPTCHA, 2FA, términos obligatorios o falta de botón de envío. Nunca guarda contraseñas ni evade verificaciones.
 

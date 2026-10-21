@@ -16,7 +16,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Importar una vacante por URL:** pega el enlace público de cualquier oferta y JobRadar extrae título, empresa, ubicación, salario y descripción desde schema.org/OpenGraph, calcula el match y conserva el enlace original para postular en el portal.
 - **CV adaptado por vacante:** reescribe el resumen, prioriza skills y reordena experiencia usando solo información real del perfil. Genera DOCX y PDF después de tu aprobación.
 - **Asistente de postulación:** prepara los campos, redacta respuestas y adjunta el CV elegido. En portales compatibles la extensión de Chrome rellena el formulario; tú revisas y confirmas el envío.
-- **Auto-envío opcional:** desactivado por defecto. Cuando lo activas, procesa en orden solo portales permitidos (Greenhouse, Lever, Ashby, Workable, Breezy y Teamtailor) y deja las demás vacantes como cartas manuales con descripción y enlace original.
+- **Auto-envío opcional:** desactivado por defecto. Tiene un interruptor en **Vacantes** y en **Ajustes**. Cuando lo activas, procesa en orden solo portales permitidos (Greenhouse, Lever, Ashby, Workable, Breezy y Teamtailor) y deja las demás vacantes como cartas manuales con descripción y enlace original.
 - **Portales restringidos:** LinkedIn, Indeed, Computrabajo, Magneto, elempleo y Glassdoor son solo manuales: se muestra la vacante y se abre el portal original, sin autocompletado ni envío.
 - **Frescura y descarte:** filtros de 24 h, 48 h (por defecto), 7 días o todo; las vacantes sin fecha se excluyen por defecto. Puedes descartar una vacante para que no reaparezca en búsquedas ni rondas de auto-envío.
 - **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas.
@@ -95,7 +95,7 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `LLM_MODEL_FAST` | Modelo rápido para analizar CV y ofertas (por defecto `nvidia/nemotron-3.5-lightning:free`). |
 | `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (por defecto `nvidia/nemotron-3-ultra-550b-a55b:free`). |
 | `LLM_MODEL_FALLBACK` | Modelo de respaldo (por defecto `nvidia/nemotron-3.5-super-vl:free`). |
-| `AUTO_SUBMIT_ENABLED` | Valor inicial de referencia (por defecto `false`). La activación por usuario se hace con el interruptor de Ajustes. |
+| `AUTO_SUBMIT_ENABLED` | Valor inicial de referencia (por defecto `false`). La activación por usuario se hace con el interruptor de Vacantes o Ajustes. |
 | `AUTO_SUBMIT_MAX_PER_RUN` | Máximo de vacantes por ronda (por defecto 5). |
 | `AUTO_SUBMIT_PORTALS` | Lista de ATS permitidos para auto-envío. |
 | `MANUAL_ONLY_PORTALS` | Portales que nunca se asisten ni se envían automáticamente. |

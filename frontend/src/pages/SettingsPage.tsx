@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { Toggle } from "@/components/Toggle";
 import { api } from "@/lib/api";
 import type { Preferences } from "@/lib/types";
 import { cn, joinList, parseList } from "@/lib/utils";
@@ -486,25 +487,24 @@ export function SettingsPage() {
             </div>
 
             <div className="mt-5 space-y-4">
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/60 bg-white/[0.02] p-4">
-                <input
-                  type="checkbox"
-                  checked={form.auto_submit_enabled}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, auto_submit_enabled: event.target.checked }))
-                  }
-                  className="mt-1 accent-emerald-400"
-                />
-                <span>
-                  <span className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+              <div className="flex items-start justify-between gap-4 rounded-xl border border-line/60 bg-white/[0.02] p-4">
+                <div>
+                  <p className="flex items-center gap-2 text-xs font-semibold text-slate-200">
                     <Zap className="h-3.5 w-3.5 text-emerald-300" /> Habilitar “Realizar auto-envío”
-                  </span>
-                  <span className="mt-1 block text-[11px] leading-relaxed text-muted">
+                  </p>
+                  <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-muted">
                     Cuando esté activo, aparecerá el botón en Vacantes. Solo se procesan portales permitidos; LinkedIn,
                     Indeed, Computrabajo, Magneto, elempleo y Glassdoor siguen siendo manuales.
-                  </span>
-                </span>
-              </label>
+                  </p>
+                </div>
+                <Toggle
+                  checked={form.auto_submit_enabled}
+                  onChange={(checked) =>
+                    setForm((current) => ({ ...current, auto_submit_enabled: checked }))
+                  }
+                  label="Habilitar auto-envío"
+                />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
