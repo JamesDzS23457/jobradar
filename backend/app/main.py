@@ -60,6 +60,11 @@ def root() -> dict:
     }
 
 
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok", "app": settings.app_name, "demo_mode": settings.demo_mode}
+
+
 if __name__ == "__main__":
     import uvicorn
 

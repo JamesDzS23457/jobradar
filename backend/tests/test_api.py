@@ -9,6 +9,10 @@ def test_health():
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
+        root_health = client.get("/health")
+        assert root_health.status_code == 200
+        assert root_health.json()["status"] == "ok"
+
 
 def test_demo_seed_and_dashboard():
     with TestClient(app) as client:
