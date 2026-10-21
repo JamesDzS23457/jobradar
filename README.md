@@ -18,7 +18,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Asistente de postulación:** prepara los campos, redacta respuestas y adjunta el CV elegido. En portales compatibles la extensión de Chrome rellena el formulario; tú revisas y confirmas el envío.
 - **Auto-envío opcional:** desactivado por defecto. Cuando lo activas, procesa en orden solo portales permitidos (Greenhouse, Lever, Ashby, Workable, Breezy y Teamtailor) y deja las demás vacantes como cartas manuales con descripción y enlace original.
 - **Portales restringidos:** LinkedIn, Indeed, Computrabajo, Magneto, elempleo y Glassdoor son solo manuales: se muestra la vacante y se abre el portal original, sin autocompletado ni envío.
-- **Frescura y descarte:** filtros de 24 h, 48 h (default), 7 días o todo; las vacantes sin fecha se excluyen por defecto. Puedes descartar una vacante para que no reaparezca en búsquedas ni rondas de auto-envío.
+- **Frescura y descarte:** filtros de 24 h, 48 h (por defecto), 7 días o todo; las vacantes sin fecha se excluyen por defecto. Puedes descartar una vacante para que no reaparezca en búsquedas ni rondas de auto-envío.
 - **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas.
 - **Alertas por Gmail:** correo inmediato para matches excelentes y resumen diario para los buenos.
 - **Modo demo:** funciona sin claves, sin red y sin datos reales. Ideal para probar la experiencia o mostrarla en un portafolio.
@@ -84,7 +84,7 @@ make lint      # ruff + build de TypeScript
 
 ## Variables de entorno
 
-Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usar:
+Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usar. La guía paso a paso está en [`docs/CONFIGURACION.md`](docs/CONFIGURACION.md).
 
 | Variable | Descripción |
 |---|---|
@@ -92,26 +92,26 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `DATABASE_URL` | Por defecto SQLite en `data/jobradar.db`. |
 | `LLM_API_KEY` / `OPENROUTER_API_KEY` | Clave de OpenRouter (cualquiera de las dos). Si están vacías, usa fallback heurístico y plantillas. |
 | `LLM_BASE_URL` | Por defecto `https://openrouter.ai/api/v1`. |
-| `LLM_MODEL_FAST` | Modelo rápido para parsing (default `nvidia/nemotron-3.5-lightning:free`). |
-| `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (default `nvidia/nemotron-3-super-120b-a12b:free`). |
-| `LLM_MODEL_FALLBACK` | Modelo de respaldo (default `nvidia/nemotron-3.5-super-vl:free`). |
-| `AUTO_SUBMIT_ENABLED` | Valor global de referencia para despliegues (default `false`). La activación por usuario se hace con el interruptor de Ajustes. |
-| `AUTO_SUBMIT_MAX_PER_RUN` | Máximo de vacantes por ronda (default 5). |
-| `AUTO_SUBMIT_PORTALS` | Allowlist de ATS para auto-envío. |
+| `LLM_MODEL_FAST` | Modelo rápido para analizar CV y ofertas (por defecto `nvidia/nemotron-3.5-lightning:free`). |
+| `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (por defecto `nvidia/nemotron-3-super-120b-a12b:free`). |
+| `LLM_MODEL_FALLBACK` | Modelo de respaldo (por defecto `nvidia/nemotron-3.5-super-vl:free`). |
+| `AUTO_SUBMIT_ENABLED` | Valor inicial de referencia (por defecto `false`). La activación por usuario se hace con el interruptor de Ajustes. |
+| `AUTO_SUBMIT_MAX_PER_RUN` | Máximo de vacantes por ronda (por defecto 5). |
+| `AUTO_SUBMIT_PORTALS` | Lista de ATS permitidos para auto-envío. |
 | `MANUAL_ONLY_PORTALS` | Portales que nunca se asisten ni se envían automáticamente. |
 | `DEFAULT_CV_SOURCE` | `tailored` (CV adaptado ATS) u `original` (PDF original). |
-| `FRESHNESS_DAYS` | Frescura por defecto del listado (default 2 días). |
+| `FRESHNESS_DAYS` | Frescura por defecto del listado (por defecto 2 días). |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). |
 | `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). |
 | `BRAVE_SEARCH_API_KEY` | Opcional. Búsqueda web de vacantes públicas vía Brave Search (tiene plan gratuito). |
 | `SMTP_USER` / `SMTP_PASSWORD` | Gmail + contraseña de aplicación. |
 | `ALERT_TO` | Correo que recibe las alertas. |
-| `ALERT_THRESHOLD` | Score mínimo para alerta inmediata (default 85). |
-| `DIGEST_THRESHOLD` | Score mínimo para el resumen diario (default 70). |
-| `DIGEST_HOUR` | Hora del resumen diario, en la zona horaria configurada (default 8). |
+| `ALERT_THRESHOLD` | Score mínimo para alerta inmediata (por defecto 85). |
+| `DIGEST_THRESHOLD` | Score mínimo para el resumen diario (por defecto 70). |
+| `DIGEST_HOUR` | Hora del resumen diario, en la zona horaria configurada (por defecto 8). |
 | `ENABLE_SCHEDULER` | Activa búsquedas periódicas y resumen diario. |
-| `SEARCH_INTERVAL_HOURS` | Frecuencia de búsqueda automática (default 6). |
-| `TIMEZONE` | Zona horaria del scheduler (default `America/Bogota`). |
+| `SEARCH_INTERVAL_HOURS` | Frecuencia de búsqueda automática (por defecto 6). |
+| `TIMEZONE` | Zona horaria del programador (por defecto `America/Bogota`). |
 
 > **Proveedor de IA:** JobRadar usa únicamente **OpenRouter**. Los IDs `nvidia/...` son el namespace de modelos de NVIDIA dentro de OpenRouter; no se usa la API directa de NVIDIA ni se requiere una segunda clave. Los tres modelos elegidos son las variantes `:free` que aparecen en el grupo de OpenRouter.
 
@@ -205,7 +205,7 @@ jobradar/
 │   │   ├── data/       # dataset demo y catálogo de skills
 │   │   ├── models/     # entidades SQLAlchemy
 │   │   ├── schemas/    # contratos Pydantic
-│   │   └── services/   # matching, fuentes, CV, correo, scheduler
+│   │   └── services/   # coincidencias, fuentes, CV, correo, programador
 │   └── tests/
 ├── frontend/
 │   ├── public/
@@ -227,14 +227,14 @@ cd backend && uv run ruff check .
 cd frontend && npm run build
 ```
 
-El backend incluye pruebas de reglas de ubicación, motor de matching, endpoints, exportación, digest de correo, clasificación de portales, sesiones de postulación, auto-envío, frescura y descarte. El frontend se valida con TypeScript estricto y build de producción de Vite. La extensión se valida con `node --check` y el manifiesto con `python -m json.tool`.
+El backend incluye pruebas de reglas de ubicación, motor de coincidencias, endpoints, exportación, resumen de correo, clasificación de portales, sesiones de postulación, auto-envío, frescura y descarte. El frontend se valida con TypeScript estricto y build de producción de Vite. La extensión se valida con `node --check` y el manifiesto con `python -m json.tool`.
 
 ## Estado
 
 MVP local completo:
 
 - [x] Perfil, carga y parsing de CV.
-- [x] Preferencias, reglas de ubicación y matching explicable.
+- [x] Preferencias, reglas de ubicación y coincidencias explicables.
 - [x] Ingesta demo y fuentes externas opcionales.
 - [x] Importación de vacantes públicas por URL con JSON-LD/OpenGraph.
 - [x] Dashboard, vacantes, detalle y tracker.

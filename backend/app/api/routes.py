@@ -74,7 +74,13 @@ def _profile(db: Session) -> Profile | None:
 def _prefs(db: Session) -> Preferences:
     prefs = db.get(Preferences, 1)
     if prefs is None:
-        prefs = Preferences(id=1)
+        prefs = Preferences(
+            id=1,
+            freshness_days=settings.freshness_days,
+            auto_submit_enabled=settings.auto_submit_enabled,
+            auto_submit_max_per_run=settings.auto_submit_max_per_run,
+            default_cv_source=settings.default_cv_source,
+        )
         db.add(prefs)
         db.commit()
         db.refresh(prefs)
