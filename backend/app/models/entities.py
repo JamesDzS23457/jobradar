@@ -144,6 +144,7 @@ class Job(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     hash: Mapped[str] = mapped_column(String(64), default="")
+    dedupe_key: Mapped[str] = mapped_column(String(64), default="", index=True)
     raw_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(30), default="new")
     imported_manually: Mapped[bool] = mapped_column(Boolean, default=False)

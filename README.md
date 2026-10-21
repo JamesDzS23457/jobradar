@@ -18,6 +18,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Búsqueda con reglas de ubicación:** Bogotá y ciudades cercanas para presencial/híbrido; resto de Colombia solo con reubicación; fuera de Colombia solo remoto.
 - **Match explicable:** score de 0 a 100 con desglose por skills, rol, seniority, ubicación, idioma, salario y frescura. Cada resultado incluye razones, brechas y señales de alerta.
 - **Plataforma y fuente:** cada tarjeta muestra el portal del enlace (LinkedIn, Computrabajo, elempleo, etc.) y quién lo recopiló (JSearch, Jooble, Tavily o importación manual).
+- **Sin duplicados:** JobRadar agrupa por URL canónica y evita que la misma vacante aparezca varias veces, aunque JSearch, Jooble o Tavily la devuelvan en rondas distintas.
 - **Importar una vacante por URL:** pega el enlace público de cualquier oferta y JobRadar extrae título, empresa, ubicación, salario y descripción desde schema.org/OpenGraph, calcula el match y conserva el enlace original para postular en el portal. Si el portal bloquea la lectura o pide login, guarda igualmente el enlace con el aviso **“Requiere iniciar sesión”**.
 - **CV adaptado por vacante:** reescribe el resumen, prioriza skills y reordena experiencia usando solo información real del perfil. Genera DOCX y PDF después de tu aprobación.
 - **Asistente de postulación:** prepara los campos, redacta respuestas y adjunta el CV elegido. En portales compatibles la extensión de Chrome rellena el formulario; tú revisas y confirmas el envío.

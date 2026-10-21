@@ -1,7 +1,9 @@
 import hashlib
 import logging
+import re
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,6 +43,7 @@ JOB_REFRESH_FIELDS = (
     "red_flags",
     "link_only",
     "collector",
+    "dedupe_key",
 )
 
 
@@ -73,6 +76,49 @@ def parse_datetime(value: Any) -> datetime | None:
             except ValueError:
                 continue
     return None
+
+
+TRACKING_PARAMS = {
+    "position",
+    "pagenum",
+    "refid",
+    "trackingid",
+    "trk",
+    "fgoa",
+    "gclid",
+    "fbclid",
+    "mc_cid",
+    "mc_eid",
+}
+
+
+def canonical_url(raw_url: str) -> str:
+    text = (raw_url or "").strip()
+    if not text:
+        return ""
+    parsed = urlparse(text)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return text.lower()
+    host = parsed.netloc.lower().removeprefix("www.")
+    path = re.sub(r"/+", "/", parsed.path or "/").rstrip("/") or "/"
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.lower() not in TRACKING_PARAMS and not key.lower().startswith("utm_")
+    ]
+    return urlunparse(("https", host, path, "", urlencode(sorted(query)), ""))
+
+
+def dedupe_key_for(data: dict[str, Any]) -> str:
+    canonical = canonical_url(str(data.get("url") or ""))
+    if canonical:
+        return hashlib.sha256(f"url:{canonical}".encode()).hexdigest()
+    parts = [
+        str(data.get("title") or "").strip().lower(),
+        str(data.get("company") or "").strip().lower(),
+        str(data.get("location_text") or "").strip().lower(),
+    ]
+    return hashlib.sha256("text:" + "|".join(parts).encode("utf-8")).hexdigest()
 
 
 def job_hash(data: dict[str, Any]) -> str:
@@ -150,11 +196,18 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
         "collector": _clip(data.get("collector") or data.get("source") or "", 50),
     }
     normalized["hash"] = job_hash(normalized)
+    normalized["dedupe_key"] = dedupe_key_for(normalized)
     return normalized
 
 
 def upsert_job(db: Session, data: dict[str, Any], refresh: bool = False) -> tuple[Job, bool]:
     existing = db.scalar(select(Job).where(Job.hash == data["hash"]))
+    if existing is None and data.get("dedupe_key"):
+        existing = db.scalar(
+            select(Job)
+            .where(Job.dedupe_key == data["dedupe_key"])
+            .order_by(Job.id)
+        )
     now = datetime.now(UTC)
     if existing:
         existing.last_seen_at = now
@@ -184,6 +237,7 @@ def upsert_job(db: Session, data: dict[str, Any], refresh: bool = False) -> tupl
         fetched_at=now,
         last_seen_at=now,
         hash=data["hash"],
+        dedupe_key=data.get("dedupe_key") or "",
         raw_json=data["raw_json"],
         skills_required=data["skills_required"],
         skills_nice=data["skills_nice"],
@@ -287,3 +341,65 @@ def clear_legacy_search_errors(db: Session) -> int:
     if changed:
         db.commit()
     return changed
+
+
+def backfill_dedupe_keys(db: Session) -> int:
+    changed = 0
+    for job in db.scalars(select(Job)).all():
+        if not job.dedupe_key:
+            job.dedupe_key = dedupe_key_for(
+                {
+                    "url": job.url,
+                    "title": job.title,
+                    "company": job.company,
+                    "location_text": job.location_text,
+                }
+            )
+            changed += 1
+    if changed:
+        db.commit()
+    return changed
+
+
+def discard_duplicate_jobs(db: Session) -> int:
+    """Keep the most useful record for each canonical URL and hide the rest."""
+    jobs = list(db.scalars(select(Job).order_by(Job.id)).all())
+    groups: dict[str, list[Job]] = {}
+    for job in jobs:
+        key = job.dedupe_key or dedupe_key_for(
+            {
+                "url": job.url,
+                "title": job.title,
+                "company": job.company,
+                "location_text": job.location_text,
+            }
+        )
+        if key:
+            groups.setdefault(key, []).append(job)
+
+    discarded = 0
+    for group in groups.values():
+        active = [job for job in group if job.status != "discarded"]
+        if len(active) < 2:
+            continue
+
+        def priority(job: Job) -> tuple[int, int]:
+            application = job.application
+            if application is not None and application.status in {"applied", "interview", "offer"}:
+                return (0, job.id)
+            if application is not None and application.status == "saved":
+                return (1, job.id)
+            return (2, job.id)
+
+        keeper = min(active, key=priority)
+        for job in active:
+            if job.id == keeper.id:
+                continue
+            job.status = "discarded"
+            raw = dict(job.raw_json or {})
+            raw["dedupe_of"] = keeper.id
+            job.raw_json = raw
+            discarded += 1
+    if discarded:
+        db.commit()
+    return discarded

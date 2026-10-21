@@ -10,7 +10,11 @@ from app.core.db import SessionLocal, init_db
 from app.models import Preferences, Profile
 from app.services.matching import recompute_all
 from app.services.scheduler import shutdown_scheduler, start_scheduler
-from app.services.search import clear_legacy_search_errors
+from app.services.search import (
+    backfill_dedupe_keys,
+    clear_legacy_search_errors,
+    discard_duplicate_jobs,
+)
 from app.services.seed import seed_demo
 
 logging.basicConfig(
@@ -30,6 +34,9 @@ async def lifespan(_app: FastAPI):
         cleared = clear_legacy_search_errors(db)
         if cleared:
             logger.info("Cleared obsolete search errors from %s run(s)", cleared)
+        backfilled = backfill_dedupe_keys(db)
+        if backfilled:
+            logger.info("Backfilled dedupe keys for %s job(s)", backfilled)
         if settings.demo_mode:
             seed_demo(db)
         else:
@@ -43,6 +50,9 @@ async def lifespan(_app: FastAPI):
                 except Exception:
                     logger.exception("Startup match recomputation failed")
                     db.rollback()
+        discarded = discard_duplicate_jobs(db)
+        if discarded:
+            logger.info("Discarded %s duplicate job(s)", discarded)
     finally:
         db.close()
     start_scheduler(settings)

@@ -39,6 +39,7 @@ _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("imported_manually", "BOOLEAN DEFAULT 0"),
         ("link_only", "BOOLEAN DEFAULT 0"),
         ("collector", "VARCHAR(50) DEFAULT ''"),
+        ("dedupe_key", "VARCHAR(64) DEFAULT ''"),
     ],
     "matches": [
         ("fit_level", "VARCHAR(20) DEFAULT 'exact'"),

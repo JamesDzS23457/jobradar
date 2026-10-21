@@ -216,6 +216,13 @@ Si un portal no publica fecha, la vacante se oculta por defecto. En **Vacantes**
 
 Tavily también busca fuera de los portales fijos mediante consultas públicas y guarda como link-only los enlaces que redirigen a listados o requieren login. Nunca inicia sesión ni evade bloqueos.
 
+
+### Deduplicación
+
+JobRadar calcula una URL canónica por vacante: quita `utm_*`, `trackingId`, `trk`, `refId`, fragmentos y parámetros de seguimiento. Si JSearch, Jooble o Tavily devuelven la misma URL en otra búsqueda, se actualiza la vacante existente en vez de crear otra.
+
+Al iniciar, también limpia duplicados antiguos y conserva la ficha con mejor estado: postulada, guardada o la más antigua.
+
 ## 5. Asistente y auto-envío
 
 ```env
