@@ -109,3 +109,24 @@ def test_infer_job_languages_handles_explicit_and_optional_requirements():
 
     assert infer_job_languages("Requisitos: Inglés B2 obligatorio.") == {"Inglés": "B2"}
     assert infer_job_languages("English is a plus, no es obligatorio.") == {}
+
+
+def test_seniority_preference_excludes_higher_levels():
+    junior_prefs = prefs()
+    junior_prefs.seniority = "junior"
+    result = compute_match(profile(), junior_prefs, job(seniority="senior"))
+    assert result["eligible"] is False
+    assert "seniority" in result["recommendation"].lower()
+
+    any_prefs = prefs()
+    any_prefs.seniority = "any"
+    result = compute_match(profile(), any_prefs, job(seniority="senior"))
+    assert result["eligible"] is True
+
+
+def test_seniority_gate_uses_title_when_metadata_is_wrong():
+    junior_prefs = prefs()
+    junior_prefs.seniority = "junior"
+    result = compute_match(profile(), junior_prefs, job(title="Senior Backend Engineer", seniority="mid"))
+    assert result["eligible"] is False
+    assert "seniority" in result["recommendation"].lower()

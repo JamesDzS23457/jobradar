@@ -30,6 +30,7 @@ from app.services.llm import llm_service
 from app.services.matching import match_to_dict
 from app.services.portals import classify_portal
 from app.services.tailoring import export_pdf, fallback_tailored, generate_tailored
+from app.services.text_clean import clean_html_text
 
 logger = logging.getLogger(__name__)
 
@@ -322,7 +323,7 @@ def job_summary(job: Job, include_description: bool = False) -> dict[str, Any]:
         "imported_manually": bool(job.imported_manually),
     }
     if include_description:
-        data["description"] = job.description
+        data["description"] = clean_html_text(job.description)
     return data
 
 

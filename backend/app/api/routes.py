@@ -69,6 +69,7 @@ from app.services.portals import classify_portal
 from app.services.search import latest_search_run, normalize_job_data, run_search, upsert_job
 from app.services.seed import reset_demo, seed_demo
 from app.services.tailoring import export_docx, export_pdf, generate_tailored, tailored_to_dict
+from app.services.text_clean import clean_html_text
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ def _job_dict(job: Job, include_description: bool = False) -> dict:
         "imported_manually": bool(job.imported_manually),
     }
     if include_description:
-        data["description"] = job.description
+        data["description"] = clean_html_text(job.description)
     return data
 
 

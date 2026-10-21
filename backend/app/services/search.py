@@ -14,6 +14,7 @@ from app.services.language import infer_job_languages
 from app.services.location import infer_remote_scope, infer_remote_type, seniority_from_title
 from app.services.matching import canonical_skill, recompute_all
 from app.services.sources import get_sources
+from app.services.text_clean import clean_html_text
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +88,11 @@ def job_hash(data: dict[str, Any]) -> str:
 
 
 def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
-    title = str(data.get("title") or "").strip()
-    description = str(data.get("description") or "").strip()
-    location_text = str(data.get("location_text") or "").strip()
-    country = str(data.get("country") or "").strip()
-    city = str(data.get("city") or "").strip()
+    title = clean_html_text(data.get("title") or "", max_length=240)
+    description = clean_html_text(data.get("description") or "", max_length=50_000)
+    location_text = clean_html_text(data.get("location_text") or "", max_length=240)
+    country = clean_html_text(data.get("country") or "", max_length=120)
+    city = clean_html_text(data.get("city") or "", max_length=120)
     remote_type = infer_remote_type(
         {
             "remote_type": data.get("remote_type"),

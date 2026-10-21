@@ -108,6 +108,10 @@ export function JobsPage() {
     queryKey: ["jobs", filters],
     queryFn: () => api.jobs(filters),
   });
+  const { data: dashboardSnapshot } = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
+  const eligibleTotal = dashboardSnapshot?.stats.eligible_jobs;
+  const showing = data?.total ?? 0;
+  const hiddenByFilters = !showDiscarded && eligibleTotal !== undefined && showing < eligibleTotal;
 
   const hasFilters = Boolean(
     q ||
@@ -172,6 +176,33 @@ export function JobsPage() {
           </>
         }
       />
+
+      {hiddenByFilters && (
+        <section className="mb-4 flex flex-col gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <SlidersHorizontal className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+            <div>
+              <p className="text-xs font-semibold text-cyan-100">
+                Mostrando {showing} de {eligibleTotal} ofertas elegibles.
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-cyan-100/60">
+                Los filtros activos de frescura, modalidad, búsqueda o seniority están ocultando el resto.
+                Las vacantes descartadas y las no elegibles no se cuentan aquí.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {maxAgeDays !== 0 && (
+              <button type="button" onClick={() => setMaxAgeDays(0)} className="btn-secondary px-3 py-2 text-xs">
+                Ver todo el histórico
+              </button>
+            )}
+            <button type="button" onClick={resetFilters} className="btn-ghost px-3 py-2 text-xs">
+              Limpiar filtros
+            </button>
+          </div>
+        </section>
+      )}
 
       {importOpen && (
         <section className="card mb-6 border-primary/20 p-4">

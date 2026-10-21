@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 
 from app.services.cv_parser import find_skills
 from app.services.location import seniority_from_title
+from app.services.text_clean import clean_html_text
 
 logger = logging.getLogger(__name__)
 
@@ -174,13 +175,7 @@ def _as_list(value: Any) -> list[str]:
 
 
 def _strip_html(value: Any) -> str:
-    if value is None:
-        return ""
-    text = BeautifulSoup(str(value), "html.parser").get_text("\n", strip=True)
-    text = unescape(text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:MAX_DESCRIPTION_CHARS]
+    return clean_html_text(value, max_length=MAX_DESCRIPTION_CHARS)
 
 
 def _clean_title(value: Any, company: str = "") -> str:

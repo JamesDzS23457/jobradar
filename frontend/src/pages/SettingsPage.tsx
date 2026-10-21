@@ -345,7 +345,11 @@ export function SettingsPage() {
                     <option value="mid" className="bg-surface">Mid</option>
                     <option value="senior" className="bg-surface">Senior</option>
                     <option value="lead" className="bg-surface">Lead / Staff</option>
+                    <option value="any" className="bg-surface">Cualquiera</option>
                   </select>
+                  <p className="mt-1.5 text-[11px] text-muted">
+                    No se muestran cargos por encima de este nivel. Elige Cualquiera para ver todos.
+                  </p>
                 </div>
                 <div>
                   <label className="label" htmlFor="salary_min">

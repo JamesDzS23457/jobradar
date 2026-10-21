@@ -100,6 +100,22 @@ En JobRadar, si la clave está configurada, cada ejecución de **Buscar ahora** 
 Si no tienes estas claves, JobRadar igual consulta Remotive y RemoteOK, y siempre puedes usar **Importar por URL** para cualquier vacante pública. Para buscar empleos presenciales o híbridos en Bogotá, JSearch, Jooble o Brave ayudan bastante.
 
 
+
+### Seniority
+
+En **Ajustes → Búsqueda → Seniority**:
+
+- `Junior`: no muestra Senior ni Lead.
+- `Mid`: no muestra Lead.
+- `Senior` y `Lead`: permiten niveles iguales o inferiores.
+- `Cualquiera`: no aplica este filtro.
+
+El filtro se recalcula al guardar Ajustes o al reiniciar el backend.
+
+### Descripciones
+
+JobRadar limpia las descripciones antes de guardarlas y mostrarlas: elimina etiquetas HTML, entidades (`&amp;`), scripts y texto mal codificado. No deberías ver `<p>`, `<li>` ni `Ã³` en una vacante.
+
 ## 4.1 Roles y keywords automáticos desde el CV
 
 Al subir o reemplazar tu CV, JobRadar:

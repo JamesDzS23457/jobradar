@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.models import Job, Match, Preferences, Profile
 from app.services.cv_parser import ALIASES
 from app.services.language import infer_job_languages
-from app.services.location import location_fit
+from app.services.location import location_fit, seniority_from_title
+from app.services.text_clean import clean_html_text
 
 WEIGHTS = {
     "skills": 0.40,
@@ -58,6 +59,8 @@ ROLE_FAMILIES = {
     "mobile": {"mobile", "android", "ios", "flutter", "react native"},
     "design": {"design", "ux", "ui/ux", "product designer"},
 }
+
+SENIORITY_RANK = {"junior": 0, "mid": 1, "senior": 2, "lead": 3}
 
 LEVELS = {
     "a1": 1,
@@ -245,7 +248,7 @@ def ineligible_match(job: Job, reason: str, recommendation: str = "No elegible")
 def _required_languages(job: Job) -> dict[str, str]:
     # Prefer explicit language requirements found in the text over legacy
     # stored values that may have been inferred too broadly.
-    inferred = infer_job_languages(f"{job.title}\n{job.description}")
+    inferred = infer_job_languages(clean_html_text(f"{job.title}\n{job.description}"))
     if inferred:
         return inferred
     return job.languages if isinstance(job.languages, dict) else {}
@@ -274,6 +277,22 @@ def compute_match(profile: Profile, prefs: Preferences, job: Job) -> dict[str, A
                     f"La vacante exige {language} {level} y tu CV no acredita ese idioma",
                     "No elegible por idioma",
                 )
+
+    preference_seniority = str(prefs.seniority or "any").lower()
+    job_seniority = str(job.seniority or "").lower()
+    title_seniority = seniority_from_title(job.title)
+    if title_seniority != "mid":
+        job_seniority = title_seniority
+    if (
+        preference_seniority in SENIORITY_RANK
+        and job_seniority in SENIORITY_RANK
+        and SENIORITY_RANK[job_seniority] > SENIORITY_RANK[preference_seniority]
+    ):
+        return ineligible_match(
+            job,
+            f"La vacante es {job_seniority} y tu búsqueda está configurada para {preference_seniority}",
+            "No elegible por seniority",
+        )
 
     skills_value, matched_skills, missing_skills = skill_score(
         profile.skills or [], job.skills_required or [], job.skills_nice or []
