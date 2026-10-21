@@ -44,6 +44,7 @@ class Settings(BaseSettings):
 
     jsearch_api_key: str = ""
     jooble_api_key: str = ""
+    computrabajo_public_search: bool = True
     web_search_provider: str = "tavily"
     tavily_api_key: str = ""
     tavily_keyless: bool = True

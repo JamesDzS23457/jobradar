@@ -713,6 +713,17 @@ export function SettingsPage() {
               />
               <IntegrationRow
                 icon={Search}
+                title="Computrabajo (búsqueda pública)"
+                description="Vacantes actuales desde la búsqueda pública de Computrabajo."
+                connected={Boolean(config?.computrabajo_public_search)}
+                note={
+                  config?.computrabajo_public_search
+                    ? "Fuente activa. Solo lectura pública; no inicia sesión."
+                    : "Actívala con COMPUTRABAJO_PUBLIC_SEARCH=true."
+                }
+              />
+              <IntegrationRow
+                icon={Search}
                 title="JSearch"
                 description="Ofertas de Colombia vía RapidAPI."
                 connected={Boolean(config?.jsearch_configured)}

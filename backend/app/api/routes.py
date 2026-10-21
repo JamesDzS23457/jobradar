@@ -228,6 +228,7 @@ def config_status() -> dict:
         "smtp_configured": settings.smtp_configured,
         "jsearch_configured": settings.jsearch_configured,
         "jooble_configured": settings.jooble_configured,
+        "computrabajo_public_search": settings.computrabajo_public_search,
         "web_search_provider": settings.web_search_provider,
         "tavily_configured": settings.tavily_configured,
         "tavily_keyless": settings.tavily_keyless,

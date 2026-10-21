@@ -280,6 +280,9 @@ def run_search(db: Session, profile: Profile, prefs: Preferences, settings: Sett
             errors.append(f"{source.name}: {summary}")
             db.rollback()
 
+    discarded = discard_duplicate_jobs(db)
+    if discarded:
+        logger.info("Discarded %s duplicate job(s) after search", discarded)
     recompute_all(db, profile, prefs)
 
     if settings.smtp_configured and not settings.demo_mode:
@@ -361,10 +364,49 @@ def backfill_dedupe_keys(db: Session) -> int:
     return changed
 
 
+def _text_dedupe_key(job: Job) -> str:
+    parts = [
+        re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+        for value in (job.title, job.company, job.location_text)
+    ]
+    if not parts[0] or not parts[1]:
+        return ""
+    return "text:" + "|".join(parts)
+
+
+def _match_priority(job: Job) -> tuple[int, int]:
+    application = job.application
+    if application is not None and application.status in {"applied", "interview", "offer"}:
+        return (0, job.id)
+    if application is not None and application.status == "saved":
+        return (1, job.id)
+    if job.link_only:
+        return (3, job.id)
+    return (2, job.id)
+
+
+def _discard_groups(groups: dict[str, list[Job]]) -> int:
+    discarded = 0
+    for group in groups.values():
+        active = [job for job in group if job.status != "discarded"]
+        if len(active) < 2:
+            continue
+        keeper = min(active, key=_match_priority)
+        for job in active:
+            if job.id == keeper.id:
+                continue
+            job.status = "discarded"
+            raw = dict(job.raw_json or {})
+            raw["dedupe_of"] = keeper.id
+            job.raw_json = raw
+            discarded += 1
+    return discarded
+
+
 def discard_duplicate_jobs(db: Session) -> int:
-    """Keep the most useful record for each canonical URL and hide the rest."""
+    """Keep the best record for each canonical URL and for same title/company."""
     jobs = list(db.scalars(select(Job).order_by(Job.id)).all())
-    groups: dict[str, list[Job]] = {}
+    url_groups: dict[str, list[Job]] = {}
     for job in jobs:
         key = job.dedupe_key or dedupe_key_for(
             {
@@ -375,35 +417,22 @@ def discard_duplicate_jobs(db: Session) -> int:
             }
         )
         if key:
-            groups.setdefault(key, []).append(job)
+            url_groups.setdefault(key, []).append(job)
+    discarded = _discard_groups(url_groups)
 
-    discarded = 0
-    for group in groups.values():
-        active = [job for job in group if job.status != "discarded"]
-        if len(active) < 2:
+    # Cross-posting dedupe: same normalized title, company and location but
+    # different URLs (common when a portal publishes the same vacancy twice).
+    text_groups: dict[str, list[Job]] = {}
+    for job in db.scalars(select(Job).order_by(Job.id)).all():
+        if job.status == "discarded":
             continue
-
-        def priority(job: Job) -> tuple[int, int]:
-            application = job.application
-            if application is not None and application.status in {"applied", "interview", "offer"}:
-                return (0, job.id)
-            if application is not None and application.status == "saved":
-                return (1, job.id)
-            return (2, job.id)
-
-        keeper = min(active, key=priority)
-        for job in active:
-            if job.id == keeper.id:
-                continue
-            job.status = "discarded"
-            raw = dict(job.raw_json or {})
-            raw["dedupe_of"] = keeper.id
-            job.raw_json = raw
-            discarded += 1
+        key = _text_dedupe_key(job)
+        if key:
+            text_groups.setdefault(key, []).append(job)
+    discarded += _discard_groups(text_groups)
     if discarded:
         db.commit()
     return discarded
-
 
 LISTING_TITLE_MARKERS = (
     "postúlate a las ofertas de empleo",

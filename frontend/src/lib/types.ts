@@ -281,6 +281,7 @@ export type ConfigStatus = {
   smtp_configured: boolean;
   jsearch_configured: boolean;
   jooble_configured: boolean;
+  computrabajo_public_search: boolean;
   web_search_provider: string;
   tavily_configured: boolean;
   tavily_keyless: boolean;

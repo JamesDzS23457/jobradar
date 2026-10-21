@@ -76,6 +76,9 @@ class TavilySearchSource(WebSearchSource):
                     try:
                         extracted, _ = import_job_from_url(url)
                     except JobImportError as exc:
+                        if "computrabajo.com" in url.lower():
+                            logger.info("Skipping unavailable Computrabajo detail %s", url)
+                            continue
                         if isinstance(exc, JobLinkOnlyError) or self._is_manual_host(url):
                             jobs.append(
                                 link_only_payload(url, str(exc), collector="tavily")
@@ -90,17 +93,7 @@ class TavilySearchSource(WebSearchSource):
                         continue
                     final_url = str(extracted.get("url") or url)
                     if not self._looks_like_job(final_url):
-                        logger.info("Keeping link-only for redirected listing page %s", final_url)
-                        jobs.append(
-                            link_only_payload(
-                                url,
-                                "El portal redirigió a una página de listado o requiere iniciar sesión. "
-                                "Abre el enlace original para ver la vacante y postularte.",
-                                collector="tavily",
-                            )
-                        )
-                        if len(jobs) >= self.max_jobs:
-                            return jobs
+                        logger.info("Skipping redirected listing page %s", final_url)
                         continue
                     extracted["collector"] = "tavily"
                     jobs.append(extracted)

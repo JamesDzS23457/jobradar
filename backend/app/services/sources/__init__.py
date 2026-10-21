@@ -1,5 +1,6 @@
 from app.core.config import Settings
 from app.services.sources.base import JobSource
+from app.services.sources.computrabajo import ComputrabajoSource
 from app.services.sources.demo import DemoSource
 from app.services.sources.jooble import JoobleSource
 from app.services.sources.jsearch import JSearchSource
@@ -19,6 +20,8 @@ def get_sources(settings: Settings) -> list[JobSource]:
         sources.append(JSearchSource(settings.jsearch_api_key))
     if settings.jooble_configured:
         sources.append(JoobleSource(settings.jooble_api_key))
+    if settings.computrabajo_public_search:
+        sources.append(ComputrabajoSource())
     provider = settings.web_search_provider.strip().lower()
     if provider == "brave":
         if settings.brave_configured:

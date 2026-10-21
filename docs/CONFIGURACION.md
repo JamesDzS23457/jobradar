@@ -203,6 +203,19 @@ En **Vacantes** puedes activar o desactivar **Incluir oportunidades potenciales*
 El **auto-envío** ignora las potenciales: solo procesa coincidencias exactas.
 
 
+
+### Computrabajo
+
+JobRadar lee la búsqueda pública de Computrabajo para traer vacantes actuales con título, empresa, ubicación y fecha. No inicia sesión, no aplica filtros internos del portal ni envía postulaciones.
+
+La fuente se controla con:
+
+```env
+COMPUTRABAJO_PUBLIC_SEARCH=true
+```
+
+Si el portal cambia su HTML o bloquea la lectura, JobRadar conserva el enlace y muestra el aviso de login.
+
 ### Fechas y Indeed
 
 JSearch consulta Indeed y otros portales con un rango de fecha que depende de tu frescura:

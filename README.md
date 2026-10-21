@@ -47,7 +47,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **IA:** OpenRouter con modelos gratuitos de NVIDIA Nemotron (opcional). Sin clave funciona con heurísticas y plantillas.
 - **Extensión:** Chrome Manifest V3, sin dependencias externas y sin funciones de evasión.
 - **Correo:** SMTP de Gmail con contraseña de aplicación (opcional).
-- **Fuentes:** JSearch, Jooble, Remotive, RemoteOK, búsqueda web con Tavily (sin tarjeta), Brave opcional y dataset demo.
+- **Fuentes:** JSearch, Jooble, Computrabajo (búsqueda pública), Remotive, RemoteOK, búsqueda web con Tavily (sin tarjeta), Brave opcional y dataset demo.
 
 ## Inicio rápido
 
