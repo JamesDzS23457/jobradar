@@ -14,6 +14,7 @@ from app.services.search import (
     backfill_dedupe_keys,
     clear_legacy_search_errors,
     discard_duplicate_jobs,
+    discard_listing_page_jobs,
 )
 from app.services.seed import seed_demo
 
@@ -53,6 +54,9 @@ async def lifespan(_app: FastAPI):
         discarded = discard_duplicate_jobs(db)
         if discarded:
             logger.info("Discarded %s duplicate job(s)", discarded)
+        listing_pages = discard_listing_page_jobs(db)
+        if listing_pages:
+            logger.info("Discarded %s listing page job(s)", listing_pages)
     finally:
         db.close()
     start_scheduler(settings)

@@ -49,3 +49,25 @@ def test_upsert_reuses_job_with_same_canonical_url():
         assert saved is not None
         db.delete(saved)
         db.commit()
+
+
+def test_detects_listing_pages_not_individual_jobs():
+    from app.models import Job
+    from app.services.search import is_listing_page
+
+    assert is_listing_page(Job(title="Empleos", url="https://es.linkedin.com/jobs/desarrollo-web-empleos"))
+    assert is_listing_page(Job(title="Trabajo de backend", url="https://co.indeed.com/q-backend-empleos.html"))
+    assert is_listing_page(Job(title="Trabajo de backend", url="https://co.computrabajo.com/trabajo-de-backend"))
+    assert is_listing_page(
+        Job(
+            title="Postúlate a las ofertas de empleo de Backend en Colombia",
+            url="https://www.elempleo.com/co/ofertas-empleo/trabajo-backend",
+        )
+    )
+    assert not is_listing_page(Job(title="Backend Developer", url="https://www.linkedin.com/jobs/view/123"))
+    assert not is_listing_page(
+        Job(
+            title="Backend Developer",
+            url="https://co.computrabajo.com/ofertas-de-trabajo/oferta-de-trabajo-de-backend-123",
+        )
+    )

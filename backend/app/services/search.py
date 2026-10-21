@@ -403,3 +403,52 @@ def discard_duplicate_jobs(db: Session) -> int:
     if discarded:
         db.commit()
     return discarded
+
+
+LISTING_TITLE_MARKERS = (
+    "postúlate a las ofertas de empleo",
+    "postulate a las ofertas de empleo",
+    " bolsa de empleo",
+    "bolsa de empleo",
+)
+
+
+def is_listing_page(job: Job) -> bool:
+    parsed = urlparse(job.url or "")
+    host = (parsed.hostname or "").lower().removeprefix("www.")
+    path = parsed.path.lower()
+    if host == "linkedin.com" or host.endswith(".linkedin.com"):
+        if path.startswith("/jobs/") and not path.startswith("/jobs/view/"):
+            return True
+        if path in {"/jobs", "/jobs/search"}:
+            return True
+    if host == "indeed.com" or host.endswith(".indeed.com"):
+        if path in {"/jobs", "/jobs/search"} or path.startswith("/q-"):
+            return True
+    if host == "glassdoor.com" or host.endswith(".glassdoor.com"):
+        if path.startswith("/job/") and not path.startswith("/job-listing/"):
+            return True
+    if host == "computrabajo.com" or host.endswith(".computrabajo.com"):
+        if path in {"/ofertas-de-trabajo", "/trabajo"} or path.startswith("/trabajo-"):
+            return True
+    title = (job.title or "").strip().lower()
+    if any(marker in title for marker in LISTING_TITLE_MARKERS):
+        return True
+    if title.startswith("+") and "empleos" in title:
+        return True
+    return False
+
+
+def discard_listing_page_jobs(db: Session) -> int:
+    discarded = 0
+    for job in db.scalars(select(Job).where(Job.status != "discarded")).all():
+        if not is_listing_page(job):
+            continue
+        job.status = "discarded"
+        raw = dict(job.raw_json or {})
+        raw["discarded_reason"] = "listing_page"
+        job.raw_json = raw
+        discarded += 1
+    if discarded:
+        db.commit()
+    return discarded
