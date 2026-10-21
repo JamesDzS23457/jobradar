@@ -727,10 +727,27 @@ export function SettingsPage() {
               />
               <IntegrationRow
                 icon={Globe2}
-                title="Búsqueda web"
-                description="Vacantes públicas en portales y páginas de empresas."
+                title="Búsqueda web · Tavily"
+                description="Enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard y más."
+                connected={Boolean(config?.tavily_configured)}
+                note={
+                  config?.tavily_configured
+                    ? config.tavily_keyless
+                      ? "Activo. Usa TAVILY_API_KEY si la configuras; si no, modo keyless."
+                      : "Activo con TAVILY_API_KEY."
+                    : "Activa TAVILY_KEYLESS=true o añade TAVILY_API_KEY."
+                }
+              />
+              <IntegrationRow
+                icon={KeyRound}
+                title="Brave Search (opcional)"
+                description="Alternativa de búsqueda web; requiere tarjeta."
                 connected={Boolean(config?.brave_configured)}
-                note={config?.brave_configured ? "Fuente activa vía Brave Search." : "Añade BRAVE_SEARCH_API_KEY."}
+                note={
+                  config?.web_search_provider === "brave" && config?.brave_configured
+                    ? "Proveedor activo."
+                    : "Opcional. Tavily es el proveedor recomendado."
+                }
               />
             </div>
 

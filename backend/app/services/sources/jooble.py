@@ -42,6 +42,7 @@ class JoobleSource(JobSource):
             jobs.append(
                 {
                     "source": "jooble",
+                    "collector": "jooble",
                     "external_id": str(item.get("id") or ""),
                     "title": title,
                     "company": item.get("company") or item.get("source") or "",

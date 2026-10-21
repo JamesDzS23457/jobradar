@@ -19,7 +19,7 @@ import { SearchButton } from "@/components/SearchButton";
 import { StatCard } from "@/components/StatCard";
 import { api } from "@/lib/api";
 import type { Application } from "@/lib/types";
-import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { cn, collectorLabel, formatDate, timeAgo } from "@/lib/utils";
 
 const statusStyles: Record<Application["status"], string> = {
   saved: "bg-slate-400/10 text-slate-300 ring-slate-400/20",
@@ -190,15 +190,24 @@ export function DashboardPage() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {Object.entries(data.last_run.sources).map(([source, count]) => (
-                    <span key={source} className="chip capitalize">
-                      {source} · {count}
+                    <span key={source} className="chip">
+                      {collectorLabel(source)} · {count}
                     </span>
                   ))}
                 </div>
                 {data.last_run.errors.length > 0 && (
-                  <p className="rounded-lg bg-rose-400/10 p-2 text-[11px] text-rose-200">
-                    {data.last_run.errors.length} fuente(s) con error. Revisa los ajustes.
-                  </p>
+                  <div className="rounded-lg bg-rose-400/10 p-2.5 text-[11px] text-rose-200">
+                    <p className="font-semibold">
+                      {data.last_run.errors.length} fuente(s) con error
+                    </p>
+                    <ul className="mt-1 space-y-1">
+                      {data.last_run.errors.map((error, index) => (
+                        <li key={`${index}-${error.slice(0, 20)}`} className="break-words leading-relaxed text-rose-100/80">
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             ) : (

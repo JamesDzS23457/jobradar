@@ -14,7 +14,7 @@ from app.services.language import infer_job_languages
 from app.services.location import infer_remote_scope, infer_remote_type, seniority_from_title
 from app.services.matching import canonical_skill, recompute_all
 from app.services.sources import get_sources
-from app.services.text_clean import clean_html_text
+from app.services.text_clean import clean_html_text, json_safe
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ JOB_REFRESH_FIELDS = (
     "languages",
     "red_flags",
     "link_only",
+    "collector",
 )
 
 
@@ -144,8 +145,9 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
         "years_experience": int(data.get("years_experience") or 0),
         "languages": languages,
         "red_flags": data.get("red_flags") or [],
-        "raw_json": data,
+        "raw_json": json_safe(data),
         "link_only": bool(data.get("link_only")),
+        "collector": _clip(data.get("collector") or data.get("source") or "", 50),
     }
     normalized["hash"] = job_hash(normalized)
     return normalized
@@ -190,6 +192,7 @@ def upsert_job(db: Session, data: dict[str, Any], refresh: bool = False) -> tupl
         languages=data["languages"],
         red_flags=data["red_flags"],
         link_only=data.get("link_only", False),
+        collector=data.get("collector") or data.get("source") or "",
     )
     db.add(job)
     db.flush()
@@ -219,7 +222,8 @@ def run_search(db: Session, profile: Profile, prefs: Preferences, settings: Sett
             db.commit()
         except Exception as exc:  # pragma: no cover - network dependent
             logger.exception("Source %s failed", source.name)
-            errors.append(f"{source.name}: {exc}")
+            summary = str(exc).splitlines()[0][:300] if str(exc) else exc.__class__.__name__
+            errors.append(f"{source.name}: {summary}")
             db.rollback()
 
     recompute_all(db, profile, prefs)

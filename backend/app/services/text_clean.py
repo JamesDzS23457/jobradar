@@ -33,3 +33,21 @@ def clean_html_text(value: object, max_length: int | None = None) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
     return text[:max_length] if max_length else text
+
+
+def json_safe(value: object) -> object:
+    """Convert dates and other common Python values into JSON-safe values."""
+    from datetime import date, datetime
+    from pathlib import Path
+
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [json_safe(item) for item in value]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)

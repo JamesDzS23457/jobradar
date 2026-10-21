@@ -342,6 +342,7 @@ def job_summary(job: Job, include_description: bool = False) -> dict[str, Any]:
         "link_only": bool(job.link_only),
         "requires_login": bool((job.raw_json or {}).get("requires_login")),
         "access_note": str((job.raw_json or {}).get("access_note") or ""),
+        "collector": job.collector or job.source,
     }
     if include_description:
         data["description"] = clean_html_text(job.description)

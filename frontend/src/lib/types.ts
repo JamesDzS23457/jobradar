@@ -106,6 +106,7 @@ export type Job = {
   link_only: boolean;
   requires_login: boolean;
   access_note: string;
+  collector: string;
   skills_required: string[];
   skills_nice: string[];
   seniority: string;
@@ -277,6 +278,9 @@ export type ConfigStatus = {
   smtp_configured: boolean;
   jsearch_configured: boolean;
   jooble_configured: boolean;
+  web_search_provider: string;
+  tavily_configured: boolean;
+  tavily_keyless: boolean;
   brave_configured: boolean;
   scheduler_enabled: boolean;
   alert_threshold: number;

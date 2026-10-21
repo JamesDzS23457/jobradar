@@ -44,6 +44,9 @@ class Settings(BaseSettings):
 
     jsearch_api_key: str = ""
     jooble_api_key: str = ""
+    web_search_provider: str = "tavily"
+    tavily_api_key: str = ""
+    tavily_keyless: bool = True
     brave_search_api_key: str = ""
 
     smtp_host: str = "smtp.gmail.com"
@@ -94,6 +97,17 @@ class Settings(BaseSettings):
     @property
     def brave_configured(self) -> bool:
         return bool(self.brave_search_api_key.strip())
+
+    @property
+    def tavily_configured(self) -> bool:
+        return bool(self.tavily_api_key.strip() or self.tavily_keyless)
+
+    @property
+    def web_search_configured(self) -> bool:
+        provider = self.web_search_provider.strip().lower()
+        if provider == "brave":
+            return self.brave_configured
+        return self.tavily_configured or self.brave_configured
 
     def ensure_dirs(self) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)

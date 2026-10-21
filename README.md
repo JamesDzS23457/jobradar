@@ -17,6 +17,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Descripciones limpias:** se eliminan etiquetas HTML, entidades y texto mal codificado (`Ã³`, `Ã±`) antes de mostrar la oferta.
 - **Búsqueda con reglas de ubicación:** Bogotá y ciudades cercanas para presencial/híbrido; resto de Colombia solo con reubicación; fuera de Colombia solo remoto.
 - **Match explicable:** score de 0 a 100 con desglose por skills, rol, seniority, ubicación, idioma, salario y frescura. Cada resultado incluye razones, brechas y señales de alerta.
+- **Plataforma y fuente:** cada tarjeta muestra el portal del enlace (LinkedIn, Computrabajo, elempleo, etc.) y quién lo recopiló (JSearch, Jooble, Tavily o importación manual).
 - **Importar una vacante por URL:** pega el enlace público de cualquier oferta y JobRadar extrae título, empresa, ubicación, salario y descripción desde schema.org/OpenGraph, calcula el match y conserva el enlace original para postular en el portal. Si el portal bloquea la lectura o pide login, guarda igualmente el enlace con el aviso **“Requiere iniciar sesión”**.
 - **CV adaptado por vacante:** reescribe el resumen, prioriza skills y reordena experiencia usando solo información real del perfil. Genera DOCX y PDF después de tu aprobación.
 - **Asistente de postulación:** prepara los campos, redacta respuestas y adjunta el CV elegido. En portales compatibles la extensión de Chrome rellena el formulario; tú revisas y confirmas el envío.
@@ -45,7 +46,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **IA:** OpenRouter con modelos gratuitos de NVIDIA Nemotron (opcional). Sin clave funciona con heurísticas y plantillas.
 - **Extensión:** Chrome Manifest V3, sin dependencias externas y sin funciones de evasión.
 - **Correo:** SMTP de Gmail con contraseña de aplicación (opcional).
-- **Fuentes:** JSearch, Jooble, Remotive, RemoteOK, búsqueda web opcional con Brave Search y dataset demo.
+- **Fuentes:** JSearch, Jooble, Remotive, RemoteOK, búsqueda web con Tavily (sin tarjeta), Brave opcional y dataset demo.
 
 ## Inicio rápido
 
@@ -107,7 +108,10 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `FRESHNESS_DAYS` | Frescura por defecto del listado (por defecto 2 días). |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). Plan gratuito: ~200 solicitudes/mes; cada búsqueda consume 1. |
 | `JOOBLE_API_KEY` | Jooble Colombia (clave de `co.jooble.org/api/about`). El plan gratuito da 500 solicitudes por clave **en total**, no mensuales. |
-| `BRAVE_SEARCH_API_KEY` | Opcional. Descubre enlaces públicos en Computrabajo, elempleo, Magneto, GetOnBoard y otros portales vía Brave Search. |
+| `WEB_SEARCH_PROVIDER` | `tavily` (recomendado, sin tarjeta) o `brave`. |
+| `TAVILY_API_KEY` | Opcional. Tavily funciona keyless; una clave gratis da más cuota sin tarjeta. |
+| `TAVILY_KEYLESS` | `true` usa Tavily sin clave. |
+| `BRAVE_SEARCH_API_KEY` | Opcional. Alternativa a Tavily; Brave requiere tarjeta/créditos. |
 | `SMTP_USER` / `SMTP_PASSWORD` | Gmail + contraseña de aplicación. |
 | `ALERT_TO` | Correo que recibe las alertas. |
 | `ALERT_THRESHOLD` | Score mínimo para alerta inmediata (por defecto 85). |
@@ -187,7 +191,7 @@ La extensión usa tu sesión real del navegador. No guarda contraseñas de porta
 JobRadar no scrapea portales que prohíben el acceso automatizado ni intenta saltarse inicios de sesión. La estrategia es:
 
 - APIs oficiales o agregadores: JSearch, Jooble, Remotive y RemoteOK. JSearch suele traer enlaces de LinkedIn, Indeed y Glassdoor; Jooble agrega ofertas de múltiples portales.
-- Búsqueda web opcional con Brave Search para descubrir enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard, Torre y otros portales que publican datos estructurados (`JobPosting`).
+- Búsqueda web con Tavily para descubrir enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard, Torre y otros portales. Tavily funciona sin clave ni tarjeta; Brave queda como alternativa opcional.
 - Importación manual por URL para cualquier oferta pública. Si el portal pide login, JobRadar conserva el enlace y muestra el aviso correspondiente.
 
 Por eso no promete "todas las vacantes de internet": promete traer las que sean accesibles de forma legítima y darte el enlace para postular en el portal original.

@@ -564,7 +564,7 @@ def _title_company_from_url(url: str) -> tuple[str, str]:
     return clean_title, clean_company
 
 
-def link_only_payload(raw_url: str, note: str = "", portal_label: str = "") -> dict[str, Any]:
+def link_only_payload(raw_url: str, note: str = "", portal_label: str = "", collector: str = "manual") -> dict[str, Any]:
     """Build a safe placeholder for a public link that cannot be read automatically."""
     url = _validate_url(raw_url)
     title, company = _title_company_from_url(url)
@@ -583,6 +583,7 @@ def link_only_payload(raw_url: str, note: str = "", portal_label: str = "") -> d
     )
     return {
         "source": _source_from_url(url),
+        "collector": collector,
         "external_id": url,
         "title": title,
         "company": company,

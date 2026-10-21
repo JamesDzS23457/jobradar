@@ -75,8 +75,14 @@ BRAVE_SEARCH_API_KEY=
 
 - `JSEARCH_API_KEY`: RapidAPI JSearch. Útil para vacantes en Colombia.
 - `JOOBLE_API_KEY`: Jooble. Útil para empleos locales.
-- `BRAVE_SEARCH_API_KEY`: descubrimiento web de ofertas públicas con datos estructurados.
+- `WEB_SEARCH_PROVIDER=tavily`: descubre enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard y Torre sin tarjeta.
+- `TAVILY_KEYLESS=true`: usa Tavily sin clave. Si tienes una clave gratis, añádela en `TAVILY_API_KEY`.
+- `BRAVE_SEARCH_API_KEY`: alternativa opcional. Brave ahora requiere tarjeta/créditos, así que no es necesaria.
 
+
+### Tavily vs Brave
+
+Tavily keyless no necesita cuenta, clave ni tarjeta. Brave cambió su plan gratuito y ahora pide tarjeta/créditos. Por eso el proveedor por defecto es Tavily.
 
 ### Importante sobre JSearch
 
@@ -97,7 +103,7 @@ En JobRadar, si la clave está configurada, cada ejecución de **Buscar ahora** 
 - Prueba primero con `DEMO_MODE=true`.
 - Si llegas a 500, la clave deja de responder y tendrías que solicitar otra o usar otro proveedor.
 
-Si no tienes estas claves, JobRadar igual consulta Remotive y RemoteOK, y siempre puedes usar **Importar por URL** para cualquier vacante pública. Para buscar empleos presenciales o híbridos en Bogotá, JSearch, Jooble o Brave ayudan bastante.
+Si no tienes estas claves, JobRadar igual consulta Remotive y RemoteOK, y siempre puedes usar **Importar por URL** para cualquier vacante pública. Para buscar empleos presenciales o híbridos en Bogotá, JSearch, Jooble o Tavily ayudan bastante.
 
 
 
@@ -141,7 +147,7 @@ JobRadar no inicia sesión en portales restringidos ni evade bloqueos. Lo que ha
 
 - **JSearch** puede traer enlaces de LinkedIn, Indeed y Glassdoor.
 - **Jooble** agrega ofertas de muchos portales de empleo.
-- **Brave Search** descubre enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard y Torre. Requiere `BRAVE_SEARCH_API_KEY`.
+- **Tavily** descubre enlaces públicos de Computrabajo, elempleo, Magneto, GetOnBoard y Torre. Funciona keyless, sin tarjeta; también puedes añadir `TAVILY_API_KEY` para más cuota. **Brave** queda como alternativa opcional.
 - **Importar por URL** acepta cualquier enlace público.
 
 Si el portal no permite leer la vacante automáticamente o muestra un muro de login:
@@ -152,6 +158,24 @@ Si el portal no permite leer la vacante automáticamente o muestra un muro de lo
 4. El botón **Abrir portal** te lleva al enlace original para que te postules allí.
 
 Esto aplica a LinkedIn, Computrabajo, elempleo, Magneto, Indeed, Glassdoor y cualquier portal que bloquee la lectura. No se guardan contraseñas ni se intenta saltar el login.
+
+
+## 4.3 Plataforma y fuente en cada vacante
+
+Cada tarjeta muestra dos etiquetas:
+
+- **Plataforma**: el portal del enlace, por ejemplo `LinkedIn`, `Computrabajo` o `elempleo`.
+- **Fuente**: quién recopiló el enlace, por ejemplo `JSearch`, `Jooble`, `Tavily` o `Importación manual`.
+
+Ejemplo:
+
+```text
+[Computrabajo] [Tavily]
+[LinkedIn] [JSearch]
+[Elempleo] [Importación manual]
+```
+
+Así puedes saber si la oferta vino de un agregador o de una importación directa.
 
 ## 5. Asistente y auto-envío
 
@@ -259,7 +283,7 @@ Solo cambia `CORS_ORIGINS` si usas el frontend en otro puerto o dominio.
 2. Añade tu clave de OpenRouter y pulsa **Probar modelo de IA**.
 3. Cambia `DEMO_MODE=false`, reinicia el backend y sube tu CV real.
 4. Configura preferencias y prueba **Importar por URL**.
-5. Añade JSearch/Jooble/Brave si quieres búsqueda automática.
+5. Añade JSearch/Jooble/Tavily si quieres búsqueda automática.
 6. Configura SMTP si quieres alertas.
 7. Instala la extensión y prueba una postulación asistida antes de activar el auto-envío.
 

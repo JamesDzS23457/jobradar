@@ -122,6 +122,7 @@ class JSearchSource(JobSource):
         )
         return {
             "source": "jsearch",
+            "collector": "jsearch",
             "external_id": item.get("job_id") or "",
             "title": title,
             "company": item.get("employer_name") or "",

@@ -101,7 +101,7 @@ class WebSearchSource(JobSource):
                         extracted, _ = import_job_from_url(url)
                     except JobImportError as exc:
                         if isinstance(exc, JobLinkOnlyError) or self._is_manual_host(url):
-                            jobs.append(link_only_payload(url, str(exc)))
+                            jobs.append(link_only_payload(url, str(exc), collector="websearch"))
                         else:
                             logger.info("Skipping %s: %s", url, exc)
                         if len(jobs) >= self.max_jobs:
@@ -110,6 +110,7 @@ class WebSearchSource(JobSource):
                     except Exception:  # pragma: no cover - network dependent
                         logger.exception("Could not import web result %s", url)
                         continue
+                    extracted["collector"] = "websearch"
                     jobs.append(extracted)
                     if len(jobs) >= self.max_jobs:
                         return jobs

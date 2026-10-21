@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Banknote, LogIn, MapPin, Star } from "lucide-react";
+import { ArrowUpRight, Banknote, Globe2, LogIn, MapPin, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Job } from "@/lib/types";
-import { cn, formatSalary, initials, remoteLabel, scoreLabel, timeAgo } from "@/lib/utils";
+import { cn, collectorLabel, formatSalary, initials, remoteLabel, scoreLabel, timeAgo } from "@/lib/utils";
 import { ScoreRing } from "./ScoreRing";
 
 const avatarStyles = [
@@ -97,7 +97,7 @@ export function JobCard({ job, compact = false }: Props) {
 
       {job.match && !job.match.eligible && (
         <div className="mt-3 inline-flex rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-300">
-          No elegible por ubicación
+          {job.match.recommendation}
         </div>
       )}
 
@@ -117,6 +117,10 @@ export function JobCard({ job, compact = false }: Props) {
           {job.location_text || "Remoto"}
         </span>
         <span className="chip">{remoteLabel(job.remote_type)}</span>
+        <span className="chip border-cyan-400/15 bg-cyan-400/[0.05] text-cyan-200">
+          <Globe2 className="h-3 w-3" /> {job.portal.label}
+        </span>
+        <span className="chip">{collectorLabel(job.collector || job.source)}</span>
         {!compact && (
           <span className="chip">
             <Banknote className="h-3 w-3" />

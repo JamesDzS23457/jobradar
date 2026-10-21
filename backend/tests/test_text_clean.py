@@ -24,3 +24,20 @@ def test_normalize_job_data_cleans_description():
     assert "<p>" not in normalized["description"]
     assert "<strong>" not in normalized["description"]
     assert "Python" in normalized["description"]
+
+
+def test_normalize_job_data_makes_raw_json_serializable():
+    import json
+    from datetime import UTC, datetime
+
+    normalized = normalize_job_data(
+        {
+            "title": "Backend Developer",
+            "description": "Python",
+            "url": "https://example.com/1",
+            "posted_at": datetime(2026, 10, 20, 12, 0, tzinfo=UTC),
+        }
+    )
+    assert isinstance(normalized["posted_at"], datetime)
+    json.dumps(normalized["raw_json"])
+    assert normalized["raw_json"]["posted_at"] == "2026-10-20T12:00:00+00:00"

@@ -38,6 +38,7 @@ _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
     "jobs": [
         ("imported_manually", "BOOLEAN DEFAULT 0"),
         ("link_only", "BOOLEAN DEFAULT 0"),
+        ("collector", "VARCHAR(50) DEFAULT ''"),
     ],
     "preferences": [
         ("freshness_days", "INTEGER DEFAULT 2"),

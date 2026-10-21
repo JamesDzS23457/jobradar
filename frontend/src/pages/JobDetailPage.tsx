@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { MatchPanel } from "@/components/MatchPanel";
 import { ScoreRing } from "@/components/ScoreRing";
 import { api } from "@/lib/api";
-import { formatDate, formatSalary, initials, remoteLabel } from "@/lib/utils";
+import { collectorLabel, formatDate, formatSalary, initials, remoteLabel } from "@/lib/utils";
 
 export function JobDetailPage() {
   const { id } = useParams();
@@ -141,6 +141,9 @@ export function JobDetailPage() {
                 </span>
                 <span className="chip">
                   <CalendarDays className="h-3 w-3" /> {formatDate(job.posted_at)}
+                </span>
+                <span className="chip">
+                  Fuente: {collectorLabel(job.collector || job.source)}
                 </span>
                 <span
                   className={

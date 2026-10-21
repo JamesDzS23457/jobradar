@@ -161,6 +161,7 @@ def _job_dict(job: Job, include_description: bool = False) -> dict:
         "link_only": bool(job.link_only),
         "requires_login": bool((job.raw_json or {}).get("requires_login")),
         "access_note": str((job.raw_json or {}).get("access_note") or ""),
+        "collector": job.collector or job.source,
     }
     if include_description:
         data["description"] = clean_html_text(job.description)
@@ -224,6 +225,9 @@ def config_status() -> dict:
         "smtp_configured": settings.smtp_configured,
         "jsearch_configured": settings.jsearch_configured,
         "jooble_configured": settings.jooble_configured,
+        "web_search_provider": settings.web_search_provider,
+        "tavily_configured": settings.tavily_configured,
+        "tavily_keyless": settings.tavily_keyless,
         "brave_configured": settings.brave_configured,
         "scheduler_enabled": settings.enable_scheduler,
         "alert_threshold": settings.alert_threshold,
@@ -438,6 +442,7 @@ def import_job(payload: JobUrlImport, db: Session = Depends(get_db)) -> dict:
             job, created = upsert_job(db, normalized, refresh=True)
             job.imported_manually = True
             job.link_only = True
+            job.collector = "manual"
             result = compute_match(profile, _prefs(db), job)
             upsert_match(db, job, result)
             db.commit()
@@ -459,6 +464,7 @@ def import_job(payload: JobUrlImport, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(status_code=400, detail="No se encontró el título de la vacante.")
     job, created = upsert_job(db, normalized, refresh=True)
     job.imported_manually = True
+    job.collector = "manual"
     result = compute_match(profile, _prefs(db), job)
     upsert_match(db, job, result)
     db.commit()

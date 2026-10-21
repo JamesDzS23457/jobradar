@@ -90,3 +90,19 @@ export function parseList(value: string): string[] {
 export function joinList(values: string[] | undefined): string {
   return (values ?? []).join(", ");
 }
+
+
+export function collectorLabel(value: string | undefined | null): string {
+  const key = (value || "").toLowerCase();
+  const labels: Record<string, string> = {
+    jsearch: "JSearch",
+    jooble: "Jooble",
+    tavily: "Tavily",
+    websearch: "Búsqueda web",
+    remotive: "Remotive",
+    remoteok: "RemoteOK",
+    manual: "Importación manual",
+    demo: "Demo",
+  };
+  return labels[key] || (key ? key.charAt(0).toUpperCase() + key.slice(1) : "JobRadar");
+}
