@@ -1,7 +1,7 @@
 .PHONY: install backend frontend dev test lint seed reset
 
 install:
-	cd backend && uv sync
+	cd backend && uv sync --extra dev
 	cd frontend && npm install
 
 backend:

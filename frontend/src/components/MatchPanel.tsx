@@ -121,6 +121,11 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
         )}
 
         <div className="space-y-2 border-t border-line/70 pt-4">
+          {job.url && (
+            <a href={job.url} target="_blank" rel="noreferrer" className="btn-secondary w-full">
+              <ExternalLink className="h-4 w-4" /> Postular en el portal
+            </a>
+          )}
           <Link to={`/jobs/${job.id}/tailor`} className={cn("btn-primary w-full", !match.eligible && "opacity-70")}>
             <Sparkles className="h-4 w-4" /> Adaptar mi CV
           </Link>
@@ -137,15 +142,15 @@ export function MatchPanel({ job, onApply, onSave, applying, saving, saved, appl
                 </button>
                 <button type="button" onClick={onApply} disabled={applying} className="btn-secondary w-full">
                   {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Postulada
+                  Ya postulé
                 </button>
               </>
             )}
           </div>
           {job.url && (
-            <a href={job.url} target="_blank" rel="noreferrer" className="btn-ghost w-full text-xs">
-              <ExternalLink className="h-3.5 w-3.5" /> Abrir oferta original
-            </a>
+            <p className="text-center text-[10px] leading-relaxed text-slate-600">
+              La postulación se abre en el portal original.
+            </p>
           )}
         </div>
       </div>

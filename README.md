@@ -13,12 +13,16 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Perfil desde el CV:** extrae nombre, contacto, skills, experiencia, educación e idiomas de PDF, DOCX, TXT o Markdown. Si no hay LLM configurado, usa heurísticas locales.
 - **Búsqueda con reglas de ubicación:** Bogotá y ciudades cercanas para presencial/híbrido; resto de Colombia solo con reubicación; fuera de Colombia solo remoto.
 - **Match explicable:** score de 0 a 100 con desglose por skills, rol, seniority, ubicación, idioma, salario y frescura. Cada resultado incluye razones, brechas y señales de alerta.
+- **Importar una vacante por URL:** pega el enlace público de cualquier oferta y JobRadar extrae título, empresa, ubicación, salario y descripción desde schema.org/OpenGraph, calcula el match y conserva el enlace original para postular en el portal.
 - **CV adaptado por vacante:** reescribe el resumen, prioriza skills y reordena experiencia usando solo información real del perfil. Genera DOCX y PDF después de tu aprobación.
+- **Postulación en el portal:** cada vacante tiene un botón **Postular en el portal** que abre la oferta original. JobRadar no envía tu hoja de vida ni automatiza formularios.
 - **Tracker de postulaciones:** columnas Guardadas, Postuladas, Entrevistas, Ofertas y Rechazadas.
 - **Alertas por Gmail:** correo inmediato para matches excelentes y resumen diario para los buenos.
 - **Modo demo:** funciona sin claves, sin red y sin datos reales. Ideal para probar la experiencia o mostrarla en un portafolio.
 
 ![Vacantes con score y filtros](docs/screenshots/jobs.webp)
+
+![Importar una vacante por URL](docs/screenshots/import-url.webp)
 
 ## Demo
 
@@ -33,7 +37,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 - **Frontend:** React 19, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router, Sonner.
 - **IA:** proveedor compatible con OpenAI (opcional). Sin clave funciona con heurísticas y plantillas.
 - **Correo:** SMTP de Gmail con contraseña de aplicación (opcional).
-- **Fuentes:** JSearch, Jooble, Remotive, RemoteOK y dataset demo.
+- **Fuentes:** JSearch, Jooble, Remotive, RemoteOK, búsqueda web opcional con Brave Search y dataset demo.
 
 ## Inicio rápido
 
@@ -48,7 +52,7 @@ JobRadar convierte tu CV en un perfil estructurado, busca ofertas compatibles, l
 ```bash
 cd backend
 cp .env.example .env
-uv sync
+uv sync --extra dev
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
@@ -88,6 +92,7 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `LLM_MODEL_QUALITY` | Modelo para adaptar el CV. |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). |
 | `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). |
+| `BRAVE_SEARCH_API_KEY` | Opcional. Búsqueda web de vacantes públicas vía Brave Search (tiene plan gratuito). |
 | `SMTP_USER` / `SMTP_PASSWORD` | Gmail + contraseña de aplicación. |
 | `ALERT_TO` | Correo que recibe las alertas. |
 | `ALERT_THRESHOLD` | Score mínimo para alerta inmediata (default 85). |
@@ -113,10 +118,11 @@ Con `ENABLE_SCHEDULER=true` y SMTP configurado:
 
 1. Sube tu CV en PDF o DOCX.
 2. Revisa el perfil y configura roles, ubicación, salario y modalidad.
-3. JobRadar busca ofertas y calcula el match.
+3. JobRadar busca ofertas y calcula el match. También puedes pegar el enlace público de una vacante con **Importar por URL**.
 4. Revisa el dashboard y el detalle de cada vacante.
 5. Adapta el CV, revísalo y descarga DOCX/PDF.
-6. Marca la postulación en el tracker.
+6. Pulsa **Postular en el portal** para abrir la oferta original y aplicar allí.
+7. Marca la postulación en el tracker.
 
 ![CV adaptado con guardrails y aprobación](docs/screenshots/tailor.webp)
 
@@ -127,6 +133,16 @@ Con `ENABLE_SCHEDULER=true` y SMTP configurado:
 - Presencial/híbrido en otra ciudad de Colombia: solo si aceptas reubicarte.
 - Remoto en LatAm o global: elegible si la zona horaria es compatible.
 - Presencial/híbrido fuera de Colombia: excluido.
+
+## Cobertura de fuentes
+
+JobRadar no scrapea portales que prohíben el acceso automatizado ni intenta saltarse inicios de sesión. La estrategia es:
+
+- APIs oficiales o agregadores: JSearch, Jooble, Remotive y RemoteOK.
+- Búsqueda web opcional con Brave Search, limitada a páginas públicas y portales que publican datos estructurados (`JobPosting`).
+- Importación manual por URL para cualquier oferta pública que puedas abrir en tu navegador.
+
+Por eso no promete "todas las vacantes de internet": promete traer las que sean accesibles de forma legítima y darte el enlace para postular en el portal original.
 
 ## Privacidad
 
@@ -175,6 +191,7 @@ MVP local completo:
 - [x] Perfil, carga y parsing de CV.
 - [x] Preferencias, reglas de ubicación y matching explicable.
 - [x] Ingesta demo y fuentes externas opcionales.
+- [x] Importación de vacantes públicas por URL con JSON-LD/OpenGraph.
 - [x] Dashboard, vacantes, detalle y tracker.
 - [x] Adaptación de CV con guardrails, aprobación y exportación DOCX/PDF.
 - [x] Alertas Gmail inmediatas y resumen diario.

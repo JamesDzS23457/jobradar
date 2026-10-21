@@ -5,6 +5,7 @@ import {
   Bot,
   CheckCircle2,
   Database,
+  Globe2,
   KeyRound,
   Loader2,
   Mail,
@@ -553,6 +554,13 @@ export function SettingsPage() {
                 description="Ofertas agregadas de Colombia."
                 connected={Boolean(config?.jooble_configured)}
                 note={config?.jooble_configured ? "Fuente activa." : "Añade JOOBLE_API_KEY."}
+              />
+              <IntegrationRow
+                icon={Globe2}
+                title="Búsqueda web"
+                description="Vacantes públicas en portales y páginas de empresas."
+                connected={Boolean(config?.brave_configured)}
+                note={config?.brave_configured ? "Fuente activa vía Brave Search." : "Añade BRAVE_SEARCH_API_KEY."}
               />
             </div>
 

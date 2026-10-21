@@ -5,6 +5,7 @@ from app.services.sources.jooble import JoobleSource
 from app.services.sources.jsearch import JSearchSource
 from app.services.sources.remoteok import RemoteOKSource
 from app.services.sources.remotive import RemotiveSource
+from app.services.sources.websearch import WebSearchSource
 
 
 def get_sources(settings: Settings) -> list[JobSource]:
@@ -17,6 +18,8 @@ def get_sources(settings: Settings) -> list[JobSource]:
         sources.append(JSearchSource(settings.jsearch_api_key))
     if settings.jooble_configured:
         sources.append(JoobleSource(settings.jooble_api_key))
+    if settings.brave_configured:
+        sources.append(WebSearchSource(settings.brave_search_api_key))
     # Free remote sources always add variety, even without keys.
     sources.append(RemotiveSource())
     sources.append(RemoteOKSource())

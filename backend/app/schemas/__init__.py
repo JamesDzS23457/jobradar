@@ -46,6 +46,10 @@ class JobStatusUpdate(BaseModel):
     status: Literal["new", "saved", "dismissed", "applied"]
 
 
+class JobUrlImport(BaseModel):
+    url: str = Field(min_length=8, max_length=2000)
+
+
 class ApplicationCreate(BaseModel):
     job_id: int
     status: Literal["applied", "interview", "offer", "rejected", "saved"] = "applied"

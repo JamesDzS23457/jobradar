@@ -184,10 +184,13 @@ export function JobDetailPage() {
             </Link>
             {job.url && (
               <a href={job.url} target="_blank" rel="noreferrer" className="btn-secondary">
-                <ExternalLink className="h-4 w-4" /> Ver oferta original
+                <ExternalLink className="h-4 w-4" /> Postular en el portal
               </a>
             )}
           </div>
+          <p className="text-[11px] text-slate-600">
+            La postulación se completa en el portal original. JobRadar no envía tu hoja de vida por ti.
+          </p>
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">

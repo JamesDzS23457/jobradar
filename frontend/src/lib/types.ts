@@ -169,6 +169,7 @@ export type ConfigStatus = {
   smtp_configured: boolean;
   jsearch_configured: boolean;
   jooble_configured: boolean;
+  brave_configured: boolean;
   scheduler_enabled: boolean;
   alert_threshold: number;
   database: string;

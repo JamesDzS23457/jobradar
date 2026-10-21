@@ -54,6 +54,11 @@ export const api = {
     limit?: number;
   } = {}) => request<{ items: Job[]; total: number }>(`/api/jobs${queryString(params)}`),
   job: (id: number) => request<{ job: Job }>(`/api/jobs/${id}`),
+  importJob: (url: string) =>
+    request<{ job: Job; created: boolean; extracted_with: string }>("/api/jobs/import-url", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
   updateJob: (id: number, status: Job["status"]) =>
     request<{ job: Job }>(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   search: () => request<{ run: SearchRun }>("/api/search/run", { method: "POST" }),

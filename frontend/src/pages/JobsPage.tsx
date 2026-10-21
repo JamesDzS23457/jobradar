@@ -1,6 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { BriefcaseBusiness, Filter, Search, SlidersHorizontal, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BriefcaseBusiness, Filter, Link2, Loader2, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { JobCard } from "@/components/JobCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,6 +15,28 @@ export function JobsPage() {
   const [remoteType, setRemoteType] = useState("all");
   const [minScore, setMinScore] = useState(0);
   const [includeIneligible, setIncludeIneligible] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const importMutation = useMutation({
+    mutationFn: () => api.importJob(importUrl.trim()),
+    onSuccess: (result) => {
+      toast.success(
+        result.created
+          ? "Vacante importada y analizada contra tu CV."
+          : "La vacante ya estaba en el radar. Actualizamos sus datos y el match.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      setImportUrl("");
+      setImportOpen(false);
+      navigate(`/jobs/${result.job.id}`);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const filters = useMemo(
     () => ({
@@ -38,8 +62,59 @@ export function JobsPage() {
         eyebrow="Oportunidades"
         title="Vacantes para tu perfil"
         description="Filtra por modalidad, score y texto. Las ofertas presenciales fuera de Colombia no entran al radar."
-        actions={<SearchButton />}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setImportOpen((open) => !open)}
+              className={cn("btn-secondary", importOpen && "border-primary/30 text-primary")}
+            >
+              <Link2 className="h-4 w-4" /> Importar por URL
+            </button>
+            <SearchButton />
+          </>
+        }
       />
+
+      {importOpen && (
+        <section className="card mb-6 border-primary/20 p-4">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (importUrl.trim() && !importMutation.isPending) importMutation.mutate();
+            }}
+            className="flex flex-col gap-2.5 sm:flex-row"
+          >
+            <div className="relative flex-1">
+              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                autoFocus
+                type="url"
+                value={importUrl}
+                onChange={(event) => setImportUrl(event.target.value)}
+                placeholder="https://www.computrabajo.com.co/oferta-de-trabajo..."
+                className="input pl-9"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!importUrl.trim() || importMutation.isPending}
+              className="btn-primary shrink-0"
+            >
+              {importMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {importMutation.isPending ? "Analizando..." : "Analizar vacante"}
+            </button>
+          </form>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+            Pega el enlace público de cualquier vacante. JobRadar extrae la información, la compara con tu CV y
+            conserva el enlace original para que postules directamente en el portal.
+          </p>
+        </section>
+      )}
 
       <section className="card mb-6 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

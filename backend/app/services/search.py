@@ -16,6 +16,42 @@ from app.services.sources import get_sources
 
 logger = logging.getLogger(__name__)
 
+JOB_REFRESH_FIELDS = (
+    "title",
+    "company",
+    "description",
+    "location_text",
+    "city",
+    "country",
+    "remote_type",
+    "remote_scope",
+    "salary_min",
+    "salary_max",
+    "currency",
+    "url",
+    "posted_at",
+    "raw_json",
+    "skills_required",
+    "skills_nice",
+    "seniority",
+    "years_experience",
+    "languages",
+    "red_flags",
+)
+
+
+def _clip(value: Any, limit: int) -> str:
+    return str(value or "")[:limit]
+
+
+def _int_or_none(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(round(float(str(value).replace(",", ""))))
+    except (TypeError, ValueError):
+        return None
+
 
 def parse_datetime(value: Any) -> datetime | None:
     if value is None or value == "":
@@ -82,20 +118,22 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
     if not languages and any(word in description.lower() for word in ("english", "inglés", "ingles")):
         languages = {"Inglés": "B2"}
     normalized = {
-        "source": str(data.get("source") or "unknown"),
-        "external_id": str(data.get("external_id") or ""),
-        "title": title,
-        "company": str(data.get("company") or "").strip(),
-        "description": description,
-        "location_text": location_text or ("Remoto" if remote_type == "remote" else ""),
-        "city": city,
-        "country": country or ("Worldwide" if remote_type == "remote" else ""),
+        "source": _clip(data.get("source") or "unknown", 50),
+        "external_id": _clip(data.get("external_id") or "", 200),
+        "title": _clip(title, 240),
+        "company": _clip(str(data.get("company") or "").strip(), 160),
+        "description": description[:50_000],
+        "location_text": _clip(
+            location_text or ("Remoto" if remote_type == "remote" else ""), 240
+        ),
+        "city": _clip(city, 120),
+        "country": _clip(country or ("Worldwide" if remote_type == "remote" else ""), 120),
         "remote_type": remote_type,
         "remote_scope": remote_scope,
-        "salary_min": data.get("salary_min"),
-        "salary_max": data.get("salary_max"),
-        "currency": str(data.get("currency") or "COP"),
-        "url": str(data.get("url") or ""),
+        "salary_min": _int_or_none(data.get("salary_min")),
+        "salary_max": _int_or_none(data.get("salary_max")),
+        "currency": _clip(str(data.get("currency") or "COP").upper(), 10),
+        "url": _clip(data.get("url") or "", 700),
         "posted_at": parse_datetime(data.get("posted_at")),
         "skills_required": skills,
         "skills_nice": nice,
@@ -109,12 +147,17 @@ def normalize_job_data(data: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def upsert_job(db: Session, data: dict[str, Any]) -> tuple[Job, bool]:
+def upsert_job(db: Session, data: dict[str, Any], refresh: bool = False) -> tuple[Job, bool]:
     existing = db.scalar(select(Job).where(Job.hash == data["hash"]))
     now = datetime.now(UTC)
     if existing:
         existing.last_seen_at = now
+        existing.fetched_at = now
         existing.status = existing.status or "new"
+        if refresh:
+            for field in JOB_REFRESH_FIELDS:
+                if field in data:
+                    setattr(existing, field, data[field])
         return existing, False
     job = Job(
         source=data["source"],

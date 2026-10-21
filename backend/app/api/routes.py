@@ -15,12 +15,14 @@ from app.schemas import (
     ApplicationCreate,
     ApplicationUpdate,
     JobStatusUpdate,
+    JobUrlImport,
     PreferencesUpdate,
     ProfileUpdate,
     TailoredUpdate,
 )
 from app.services.cv_parser import extract_text, find_skills, parse_profile_heuristic
 from app.services.emailer import send_test_email
+from app.services.job_import import JobImportError, import_job_from_url
 from app.services.llm import llm_service
 from app.services.matching import (
     canonical_skill,
@@ -29,7 +31,7 @@ from app.services.matching import (
     recompute_all,
     upsert_match,
 )
-from app.services.search import latest_search_run, run_search
+from app.services.search import latest_search_run, normalize_job_data, run_search, upsert_job
 from app.services.seed import reset_demo, seed_demo
 from app.services.tailoring import export_docx, export_pdf, generate_tailored, tailored_to_dict
 
@@ -133,6 +135,7 @@ def config_status() -> dict:
         "smtp_configured": settings.smtp_configured,
         "jsearch_configured": settings.jsearch_configured,
         "jooble_configured": settings.jooble_configured,
+        "brave_configured": settings.brave_configured,
         "scheduler_enabled": settings.enable_scheduler,
         "alert_threshold": settings.alert_threshold,
         "database": "sqlite" if settings.database_url.startswith("sqlite") else "external",
@@ -267,6 +270,32 @@ def search_now(db: Session = Depends(get_db)) -> dict:
 @router.get("/search/status")
 def search_status(db: Session = Depends(get_db)) -> dict:
     return {"run": _run_dict(latest_search_run(db))}
+
+
+@router.post("/jobs/import-url")
+def import_job(payload: JobUrlImport, db: Session = Depends(get_db)) -> dict:
+    """Import a public job URL, score it against the CV and keep the portal link."""
+    profile = _profile(db)
+    if profile is None:
+        raise HTTPException(status_code=400, detail="Primero sube tu CV o carga el modo demo.")
+    try:
+        extracted, extracted_with = import_job_from_url(payload.url)
+    except JobImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    normalized = normalize_job_data(extracted)
+    if not normalized["title"]:
+        raise HTTPException(status_code=400, detail="No se encontró el título de la vacante.")
+    job, created = upsert_job(db, normalized, refresh=True)
+    result = compute_match(profile, _prefs(db), job)
+    upsert_match(db, job, result)
+    db.commit()
+    db.refresh(job)
+    return {
+        "job": _job_dict(job, include_description=True),
+        "created": created,
+        "extracted_with": extracted_with,
+    }
 
 
 @router.get("/jobs")

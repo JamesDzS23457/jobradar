@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     jsearch_api_key: str = ""
     jooble_api_key: str = ""
+    brave_search_api_key: str = ""
 
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
@@ -66,6 +67,10 @@ class Settings(BaseSettings):
     @property
     def jooble_configured(self) -> bool:
         return bool(self.jooble_api_key.strip())
+
+    @property
+    def brave_configured(self) -> bool:
+        return bool(self.brave_search_api_key.strip())
 
     def ensure_dirs(self) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
