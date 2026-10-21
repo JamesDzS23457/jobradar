@@ -10,6 +10,7 @@ from app.core.db import SessionLocal, init_db
 from app.models import Preferences, Profile
 from app.services.matching import recompute_all
 from app.services.scheduler import shutdown_scheduler, start_scheduler
+from app.services.search import clear_legacy_search_errors
 from app.services.seed import seed_demo
 
 logging.basicConfig(
@@ -26,6 +27,9 @@ async def lifespan(_app: FastAPI):
     init_db()
     db = SessionLocal()
     try:
+        cleared = clear_legacy_search_errors(db)
+        if cleared:
+            logger.info("Cleared obsolete search errors from %s run(s)", cleared)
         if settings.demo_mode:
             seed_demo(db)
         else:

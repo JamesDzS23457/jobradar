@@ -263,3 +263,27 @@ def eligible_top_matches(db: Session, limit: int = 5) -> list[Match]:
 def mark_alert_sent(db: Session, job_id: int, match_id: int | None, status: str, error: str = "") -> None:
     db.add(AlertLog(job_id=job_id, match_id=match_id, status=status, error=error))
     db.commit()
+
+
+LEGACY_SEARCH_ERROR_MARKERS = (
+    "Object of type datetime is not JSON serializable",
+)
+
+
+def clear_legacy_search_errors(db: Session) -> int:
+    """Remove obsolete errors from runs created before the JSearch date fix."""
+    runs = list(db.scalars(select(SearchRun)).all())
+    changed = 0
+    for run in runs:
+        errors = list(run.errors or [])
+        filtered = [
+            error
+            for error in errors
+            if not any(marker in str(error) for marker in LEGACY_SEARCH_ERROR_MARKERS)
+        ]
+        if len(filtered) != len(errors):
+            run.errors = filtered
+            changed += 1
+    if changed:
+        db.commit()
+    return changed
