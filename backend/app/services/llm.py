@@ -264,7 +264,7 @@ class LLMService:
     def tailor_cv(self, profile: dict[str, Any], job: dict[str, Any]) -> dict[str, Any] | None:
         return self._chat_json(
             "Eres un experto en optimización de CV para ATS. " + TAILOR_SCHEMA,
-            f"PERFIL:\n{json.dumps(profile, ensure_ascii=False)}\n\nOFERTA:\n{json.dumps(job, ensure_ascii=False)[:30000]}",
+            f"PERFIL:\n{json.dumps(profile, ensure_ascii=False, default=str)}\n\nOFERTA:\n{json.dumps(job, ensure_ascii=False, default=str)[:30000]}",
             model=self.settings.llm_model_quality,
             quality=True,
             temperature=0.15,
@@ -281,9 +281,9 @@ class LLMService:
         return self._chat_json(
             "Eres un asistente de postulaciones. " + ANSWER_SCHEMA,
             (
-                f"PERFIL:\n{json.dumps(profile, ensure_ascii=False)}\n\n"
-                f"VACANTE:\n{json.dumps(job, ensure_ascii=False)[:25000]}\n\n"
-                f"PREGUNTAS:\n{json.dumps(questions[:30], ensure_ascii=False)}"
+                f"PERFIL:\n{json.dumps(profile, ensure_ascii=False, default=str)}\n\n"
+                f"VACANTE:\n{json.dumps(job, ensure_ascii=False, default=str)[:25000]}\n\n"
+                f"PREGUNTAS:\n{json.dumps(questions[:30], ensure_ascii=False, default=str)}"
             ),
             model=self.settings.llm_model_quality,
             quality=True,

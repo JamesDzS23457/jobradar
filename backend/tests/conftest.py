@@ -7,6 +7,9 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///./test_jobradar.db")
 os.environ.setdefault("UPLOAD_DIR", "./test_data/uploads")
 os.environ.setdefault("EXPORT_DIR", "./test_data/exports")
 os.environ.setdefault("ENABLE_SCHEDULER", "false")
+# Tests must never call a real LLM provider, even if backend/.env has a key.
+os.environ["LLM_API_KEY"] = ""
+os.environ["OPENROUTER_API_KEY"] = ""
 
 TEST_DB = Path(".jobradar-test.db")
 

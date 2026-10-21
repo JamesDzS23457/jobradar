@@ -80,6 +80,11 @@ def _prefs(db: Session) -> Preferences:
             auto_submit_enabled=settings.auto_submit_enabled,
             auto_submit_max_per_run=settings.auto_submit_max_per_run,
             default_cv_source=settings.default_cv_source,
+            alert_threshold=settings.alert_threshold,
+            digest_threshold=settings.digest_threshold,
+            digest_hour=settings.digest_hour,
+            search_interval_hours=settings.search_interval_hours,
+            timezone=settings.timezone,
         )
         db.add(prefs)
         db.commit()

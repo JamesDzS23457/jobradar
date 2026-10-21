@@ -93,7 +93,7 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `LLM_API_KEY` / `OPENROUTER_API_KEY` | Clave de OpenRouter (cualquiera de las dos). Si están vacías, usa fallback heurístico y plantillas. |
 | `LLM_BASE_URL` | Por defecto `https://openrouter.ai/api/v1`. |
 | `LLM_MODEL_FAST` | Modelo rápido para analizar CV y ofertas (por defecto `nvidia/nemotron-3.5-lightning:free`). |
-| `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (por defecto `nvidia/nemotron-3-super-120b-a12b:free`). |
+| `LLM_MODEL_QUALITY` | Modelo de calidad para adaptar el CV (por defecto `nvidia/nemotron-3-ultra-550b-a55b:free`). |
 | `LLM_MODEL_FALLBACK` | Modelo de respaldo (por defecto `nvidia/nemotron-3.5-super-vl:free`). |
 | `AUTO_SUBMIT_ENABLED` | Valor inicial de referencia (por defecto `false`). La activación por usuario se hace con el interruptor de Ajustes. |
 | `AUTO_SUBMIT_MAX_PER_RUN` | Máximo de vacantes por ronda (por defecto 5). |
@@ -102,7 +102,7 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 | `DEFAULT_CV_SOURCE` | `tailored` (CV adaptado ATS) u `original` (PDF original). |
 | `FRESHNESS_DAYS` | Frescura por defecto del listado (por defecto 2 días). |
 | `JSEARCH_API_KEY` | RapidAPI JSearch (ofertas en Colombia). |
-| `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). |
+| `JOOBLE_API_KEY` | Jooble (ofertas en Colombia). El plan gratuito da 500 solicitudes por clave **en total**, no mensuales. |
 | `BRAVE_SEARCH_API_KEY` | Opcional. Búsqueda web de vacantes públicas vía Brave Search (tiene plan gratuito). |
 | `SMTP_USER` / `SMTP_PASSWORD` | Gmail + contraseña de aplicación. |
 | `ALERT_TO` | Correo que recibe las alertas. |
@@ -122,10 +122,11 @@ Copia `backend/.env.example` a `backend/.env` y completa solo lo que quieras usa
 3. Crea una contraseña para "JobRadar".
 4. Usa esa contraseña en `SMTP_PASSWORD` (no tu contraseña normal).
 
-Con `ENABLE_SCHEDULER=true` y SMTP configurado:
+Con SMTP configurado y `DEMO_MODE=false`:
 
-- Un match con score ≥ `ALERT_THRESHOLD` dispara un correo inmediato.
-- Un resumen diario agrupa los matches entre `DIGEST_THRESHOLD` y `ALERT_THRESHOLD` que aún no hayas guardado o postulado.
+- Un match con score ≥ `ALERT_THRESHOLD` dispara un correo inmediato después de cada búsqueda (manual o programada).
+- Un resumen diario agrupa los matches entre `DIGEST_THRESHOLD` y `ALERT_THRESHOLD` que aún no hayas guardado o postulado. Este resumen requiere `ENABLE_SCHEDULER=true`.
+- **Ajustes → Integraciones → Probar correo** permite comprobar SMTP incluso en modo demo.
 
 ## Flujo
 

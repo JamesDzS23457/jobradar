@@ -138,14 +138,16 @@ def send_match_alerts(db: Session, settings: Settings | None = None) -> int:
     if not settings.smtp_configured:
         return 0
 
+    prefs = db.get(Preferences, 1)
+    threshold = prefs.alert_threshold if prefs else settings.alert_threshold
     matches = list(
         db.scalars(
             select(Match)
             .join(Job, Match.job_id == Job.id)
             .where(
                 Match.eligible.is_(True),
-                Match.score >= settings.alert_threshold,
-                Job.status.notin_(["saved", "applied", "dismissed"]),
+                Match.score >= threshold,
+                Job.status.notin_(["saved", "applied", "dismissed", "discarded"]),
             )
             .order_by(Match.score.desc())
             .limit(10)
@@ -195,7 +197,7 @@ def send_digest(db: Session, settings: Settings | None = None) -> int:
                 Match.eligible.is_(True),
                 Match.score >= lower,
                 Match.score < upper,
-                Job.status.notin_(["applied", "dismissed"]),
+                Job.status.notin_(["applied", "dismissed", "discarded"]),
             )
             .order_by(Match.score.desc())
             .limit(20)

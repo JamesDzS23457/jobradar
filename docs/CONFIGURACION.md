@@ -44,7 +44,7 @@ LLM_API_KEY=tu_clave_de_openrouter
 OPENROUTER_API_KEY=
 LLM_BASE_URL=https://openrouter.ai/api/v1
 LLM_MODEL_FAST=nvidia/nemotron-3.5-lightning:free
-LLM_MODEL_QUALITY=nvidia/nemotron-3-super-120b-a12b:free
+LLM_MODEL_QUALITY=nvidia/nemotron-3-ultra-550b-a55b:free
 LLM_MODEL_FALLBACK=nvidia/nemotron-3.5-super-vl:free
 LLM_TIMEOUT_SECONDS=90
 ```
@@ -77,6 +77,17 @@ BRAVE_SEARCH_API_KEY=
 - `JOOBLE_API_KEY`: Jooble. Útil para empleos locales.
 - `BRAVE_SEARCH_API_KEY`: descubrimiento web de ofertas públicas con datos estructurados.
 
+### Importante sobre Jooble
+
+El plan gratuito de Jooble permite **500 solicitudes por clave en total**, no 500 al mes. Es una cuota de por vida: no se restablece mensualmente. Además, cada dominio regional de Jooble necesita su propia clave; una clave de `jooble.org` no sirve automáticamente para otros países.
+
+En JobRadar, si la clave está configurada, cada ejecución de **Buscar ahora** consume **1 solicitud de Jooble** (se envía una sola consulta con tus roles). Una ejecución del programador también consume 1 solicitud. Para cuidar la cuota:
+
+- No actives el programador hasta estar seguro.
+- Usa **Importar por URL** para vacantes concretas: no consume Jooble.
+- Prueba primero con `DEMO_MODE=true`.
+- Si llegas a 500, la clave deja de responder y tendrías que solicitar otra o usar otro proveedor.
+
 Si no tienes estas claves, JobRadar igual consulta Remotive y RemoteOK, y siempre puedes usar **Importar por URL** para cualquier vacante pública. Para buscar empleos presenciales o híbridos en Bogotá, JSearch, Jooble o Brave ayudan bastante.
 
 ## 5. Asistente y auto-envío
@@ -108,25 +119,45 @@ Las vacantes que no se puedan automatizar aparecerán como cartas manuales con d
 
 ## 6. Correo y alertas
 
-Opcional. Si quieres alertas por Gmail:
+Opcional. Para Gmail, el bloque debe quedar así:
 
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=tu_correo@gmail.com
-SMTP_PASSWORD=tu_contraseña_de_aplicacion
-ALERT_TO=tu_correo@gmail.com
+SMTP_USER=tucorreo@gmail.com
+SMTP_PASSWORD=abcdefghijklmnop
+ALERT_TO=tucorreo@gmail.com
 ALERT_THRESHOLD=85
 DIGEST_THRESHOLD=70
 DIGEST_HOUR=8
 ```
 
-- `SMTP_USER`: tu cuenta de Gmail.
-- `SMTP_PASSWORD`: una **contraseña de aplicación** de Gmail, no tu contraseña normal.
-- `ALERT_TO`: correo que recibe las alertas.
-- `ALERT_THRESHOLD`: score para alerta inmediata.
-- `DIGEST_THRESHOLD`: score mínimo para el resumen diario.
-- `DIGEST_HOUR`: hora del resumen diario.
+Qué significa cada campo:
+
+- `SMTP_HOST`: déjalo en `smtp.gmail.com`.
+- `SMTP_PORT`: déjalo en `587` para Gmail con STARTTLS.
+- `SMTP_USER`: tu dirección completa de Gmail. Ejemplo: `juan@gmail.com`.
+- `SMTP_PASSWORD`: una **contraseña de aplicación** de Google, de 16 caracteres. No es tu contraseña normal de Gmail. Pégala sin espacios.
+- `ALERT_TO`: correo donde quieres recibir las alertas. Puede ser el mismo `SMTP_USER`.
+- `ALERT_THRESHOLD`: score mínimo para un correo inmediato. Por defecto 85.
+- `DIGEST_THRESHOLD`: score mínimo para el resumen diario. Por defecto 70. El resumen incluye vacantes con score entre este valor y `ALERT_THRESHOLD`.
+- `DIGEST_HOUR`: hora del resumen diario, en formato 0–23. Por defecto 8 (8 a. m.).
+
+### Cómo crear la contraseña de aplicación de Gmail
+
+1. Entra a tu cuenta de Google.
+2. Activa la **verificación en dos pasos** si aún no la tienes.
+3. Ve a **Seguridad → Contraseñas de aplicaciones**.
+4. Crea una para “JobRadar” o “Correo”.
+5. Copia la contraseña de 16 caracteres y pégala en `SMTP_PASSWORD`.
+
+### Importante para que los correos salgan
+
+- `DEMO_MODE` debe ser `false` para que las alertas reales se envíen.
+- El correo de prueba de **Ajustes → Integraciones → Probar correo** sí funciona aunque estés en modo demo, siempre que SMTP esté configurado.
+- Las alertas inmediatas se envían después de una búsqueda (manual o programada).
+- El resumen diario necesita `ENABLE_SCHEDULER=true` y el backend encendido.
+- Las vacantes guardadas, postuladas o descartadas no generan alertas.
 
 Si dejas estas variables vacías, JobRadar funciona igual; simplemente no envía correos.
 

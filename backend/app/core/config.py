@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model_fast: str = "nvidia/nemotron-3.5-lightning:free"
-    llm_model_quality: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    llm_model_quality: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     llm_model_fallback: str = "nvidia/nemotron-3.5-super-vl:free"
     llm_timeout_seconds: int = 90
 
